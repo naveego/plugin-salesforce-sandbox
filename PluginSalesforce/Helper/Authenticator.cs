@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Threading.Tasks;
@@ -35,20 +36,21 @@ namespace PluginSalesforce.Helper
                 {
                     // get a token
                     var requestUri = "https://login.salesforce.com/services/oauth2/token";
-                    var json = new StringContent(JsonConvert.SerializeObject(new TokenRequest
-                    {
-                        ClientId = _settings.ClientId,
-                        ClientSecret = _settings.ClientSecret,
-                        GrantType = "refresh_token",
-                        RefreshToken = _settings.RefreshToken
-                    }));
+                    
+                    var formData = new List<KeyValuePair<string,string>>();
+                    formData.Add(new KeyValuePair<string, string>("grant_type", "refresh_token"));
+                    formData.Add(new KeyValuePair<string, string>("client_id", _settings.ClientId));
+                    formData.Add(new KeyValuePair<string, string>("client_secret", _settings.ClientSecret));
+                    formData.Add(new KeyValuePair<string, string>("refresh_token", _settings.RefreshToken));
+                    
+                    var body = new FormUrlEncodedContent(formData);
                     
                     var client = _client;
                     client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
             
-                    var response = await _client.PostAsync(requestUri, json);
+                    var response = await _client.PostAsync(requestUri, body);
                     response.EnsureSuccessStatusCode();
-
+                    
                     var content = JsonConvert.DeserializeObject<TokenResponse>(await response.Content.ReadAsStringAsync());
                     
                     // update expiration and saved token
