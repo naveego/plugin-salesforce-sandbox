@@ -110,15 +110,17 @@ namespace PluginSalesforce.Plugin
             // build token url
             var tokenUrl = "https://login.salesforce.com/services/oauth2/token";
             
-            // build json request
-            var json = new StringContent(JsonConvert.SerializeObject(new TokenRequest
+            // build form data request
+            var formData = new List<KeyValuePair<string, string>>
             {
-                Code = code,
-                ClientId = clientId,
-                ClientSecret = clientSecret,
-                GrantType = grantType,
-                RedirectUri = redirectUrl
-            }));
+                new KeyValuePair<string, string>("grant_type", grantType),
+                new KeyValuePair<string, string>("client_id", clientId),
+                new KeyValuePair<string, string>("client_secret", clientSecret),
+                new KeyValuePair<string, string>("redirect_uri", redirectUrl),
+                new KeyValuePair<string, string>("code", code)
+            };
+
+            var body = new FormUrlEncodedContent(formData);
 
             // get tokens
             var oAuthState = new OAuthState();
@@ -127,7 +129,7 @@ namespace PluginSalesforce.Plugin
                 var client = _injectedClient;
                 client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
                 
-                var response = await client.PostAsync(tokenUrl, json);
+                var response = await client.PostAsync(tokenUrl, body);
                 response.EnsureSuccessStatusCode();
 
                 var content = JsonConvert.DeserializeObject<TokenResponse>(await response.Content.ReadAsStringAsync());
