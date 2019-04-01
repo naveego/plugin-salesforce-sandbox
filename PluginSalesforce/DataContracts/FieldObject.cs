@@ -22,6 +22,9 @@ namespace PluginSalesforce.DataContracts
         [JsonProperty("name")]
         public string Name { get; set; }
         
+        [JsonProperty("nillable")]
+        public bool Nillable { get; set; }
+        
         [JsonProperty("precision")]
         public int Precision { get; set; }
         
@@ -33,5 +36,8 @@ namespace PluginSalesforce.DataContracts
         
         [JsonProperty("unique")]
         public bool Unique { get; set; }
+        
+        [JsonProperty("updateable")]
+        public bool Updateable { get; set; }
     }
 }

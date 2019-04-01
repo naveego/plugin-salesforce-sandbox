@@ -36,7 +36,7 @@ namespace PluginSalesforce.Plugin
             };
             _baseUrl = String.Empty;
         }
-        
+
         /// <summary>
         /// Creates an authorization url for oauth requests
         /// </summary>
@@ -109,7 +109,7 @@ namespace PluginSalesforce.Plugin
 
             // build token url
             var tokenUrl = "https://login.salesforce.com/services/oauth2/token";
-            
+
             // build form data request
             var formData = new List<KeyValuePair<string, string>>
             {
@@ -128,7 +128,7 @@ namespace PluginSalesforce.Plugin
             {
                 var client = _injectedClient;
                 client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
-                
+
                 var response = await client.PostAsync(tokenUrl, body);
                 response.EnsureSuccessStatusCode();
 
@@ -145,7 +145,7 @@ namespace PluginSalesforce.Plugin
                 {
                     throw new Exception("Response did not contain a refresh token");
                 }
-                
+
                 if (String.IsNullOrEmpty(content.InstanceUrl))
                 {
                     throw new Exception("Response did not contain an instance url");
@@ -316,7 +316,7 @@ namespace PluginSalesforce.Plugin
                 Logger.Debug(await response.Content.ReadAsStringAsync());
 
                 tabsResponse =
-                    JsonConvert.DeserializeObject<List<TabObject> >(await response.Content.ReadAsStringAsync());
+                    JsonConvert.DeserializeObject<List<TabObject>>(await response.Content.ReadAsStringAsync());
             }
             catch (Exception e)
             {
@@ -402,14 +402,14 @@ namespace PluginSalesforce.Plugin
                 query.Length--;
 
                 query.Append($"+from+{schema.Id}");
-                
+
                 // get records for schema page by page
                 var response = await _client.GetAsync(String.Format("/query?q={0}", query));
                 response.EnsureSuccessStatusCode();
 
                 var recordsResponse =
                     JsonConvert.DeserializeObject<RecordsResponse>(await response.Content.ReadAsStringAsync());
-                
+
                 records.AddRange(recordsResponse.Records);
 
                 while (!recordsResponse.Done && _server.Connected)
@@ -419,17 +419,17 @@ namespace PluginSalesforce.Plugin
 
                     recordsResponse =
                         JsonConvert.DeserializeObject<RecordsResponse>(await response.Content.ReadAsStringAsync());
-                    
+
                     records.AddRange(recordsResponse.Records);
                 }
-                
+
                 // Publish records for the given schema
                 foreach (var record in records)
                 {
                     try
                     {
                         record.Remove("attributes");
-                        
+
                         foreach (var property in schema.Properties)
                         {
                             if (property.Type == PropertyType.String)
@@ -447,7 +447,7 @@ namespace PluginSalesforce.Plugin
                         Logger.Error(e.Message);
                         continue;
                     }
-                    
+
                     var recordOutput = new Record
                     {
                         Action = Record.Types.Action.Upsert,
@@ -464,7 +464,7 @@ namespace PluginSalesforce.Plugin
                     await responseStream.WriteAsync(recordOutput);
                     recordsCount++;
                 }
-                
+
                 Logger.Info($"Published {recordsCount} records");
             }
             catch (Exception e)
@@ -505,74 +505,74 @@ namespace PluginSalesforce.Plugin
         /// <param name="responseStream"></param>
         /// <param name="context"></param>
         /// <returns></returns>
-//        public override async Task WriteStream(IAsyncStreamReader<Record> requestStream,
-//            IServerStreamWriter<RecordAck> responseStream, ServerCallContext context)
-//        {
-//            try
-//            {
-//                Logger.Info("Writing records to Salesforce...");
-//                var schema = _server.WriteSettings.Schema;
-//                var sla = _server.WriteSettings.CommitSLA;
-//                var inCount = 0;
-//                var outCount = 0;
-//
-//                // get next record to publish while connected and configured
-//                while (await requestStream.MoveNext(context.CancellationToken) && _server.Connected &&
-//                       _server.WriteConfigured)
-//                {
-//                    var record = requestStream.Current;
-//                    inCount++;
-//
-//                    Logger.Debug($"Got record: {record.DataJson}");
-//
-//                    // send record to source system
-//                    // timeout if it takes longer than the sla
-//                    Task<string> task;
-//
-//                    if (record.Action == Record.Types.Action.Delete)
-//                    {
-//                        task = Task.Run(() => DeleteRecord(schema, record));
-//                    }
-//                    else
-//                    {
-//                        task = Task.Run(() => PutRecord(schema, record));
-//                    }
-//
-//                    if (task.Wait(TimeSpan.FromSeconds(sla)))
-//                    {
-//                        // send ack
-//                        var ack = new RecordAck
-//                        {
-//                            CorrelationId = record.CorrelationId,
-//                            Error = task.Result
-//                        };
-//                        await responseStream.WriteAsync(ack);
-//
-//                        if (String.IsNullOrEmpty(task.Result))
-//                        {
-//                            outCount++;
-//                        }
-//                    }
-//                    else
-//                    {
-//                        // send timeout ack
-//                        var ack = new RecordAck
-//                        {
-//                            CorrelationId = record.CorrelationId,
-//                            Error = "timed out"
-//                        };
-//                        await responseStream.WriteAsync(ack);
-//                    }
-//                }
-//
-//                Logger.Info($"Wrote {outCount} of {inCount} records to Salesforce.");
-//            }
-//            catch (Exception e)
-//            {
-//                Logger.Error(e.Message);
-//                throw;
-//            }
-//        }
+        public override async Task WriteStream(IAsyncStreamReader<Record> requestStream,
+            IServerStreamWriter<RecordAck> responseStream, ServerCallContext context)
+        {
+            try
+            {
+                Logger.Info("Writing records to Salesforce...");
+                var schema = _server.WriteSettings.Schema;
+                var sla = _server.WriteSettings.CommitSLA;
+                var inCount = 0;
+                var outCount = 0;
+
+                // get next record to publish while connected and configured
+                while (await requestStream.MoveNext(context.CancellationToken) && _server.Connected &&
+                       _server.WriteConfigured)
+                {
+                    var record = requestStream.Current;
+                    inCount++;
+
+                    Logger.Debug($"Got record: {record.DataJson}");
+
+                    // send record to source system
+                    // timeout if it takes longer than the sla
+                    Task<string> task;
+
+                    if (record.Action == Record.Types.Action.Delete)
+                    {
+                        task = Task.Run(() => DeleteRecord(schema, record));
+                    }
+                    else
+                    {
+                        task = Task.Run(() => PutRecord(schema, record));
+                    }
+
+                    if (task.Wait(TimeSpan.FromSeconds(sla)))
+                    {
+                        // send ack
+                        var ack = new RecordAck
+                        {
+                            CorrelationId = record.CorrelationId,
+                            Error = task.Result
+                        };
+                        await responseStream.WriteAsync(ack);
+
+                        if (String.IsNullOrEmpty(task.Result))
+                        {
+                            outCount++;
+                        }
+                    }
+                    else
+                    {
+                        // send timeout ack
+                        var ack = new RecordAck
+                        {
+                            CorrelationId = record.CorrelationId,
+                            Error = "timed out"
+                        };
+                        await responseStream.WriteAsync(ack);
+                    }
+                }
+
+                Logger.Info($"Wrote {outCount} of {inCount} records to Salesforce.");
+            }
+            catch (Exception e)
+            {
+                Logger.Error(e.Message);
+                throw;
+            }
+        }
 
         /// <summary>
         /// Handles disconnect requests from the agent
@@ -647,7 +647,8 @@ namespace PluginSalesforce.Plugin
                         IsCreateCounter = field.Name == "CreatedDate",
                         IsUpdateCounter = field.Name == "LastModifiedDate",
                         TypeAtSource = field.Type,
-                        IsNullable = field.DefaultedOnCreate
+                        IsNullable = field.Nillable,
+                        PublisherMetaJson = JsonConvert.SerializeObject(field)
                     };
 
                     schema.Properties.Add(property);
@@ -689,6 +690,10 @@ namespace PluginSalesforce.Plugin
                     }
                     return PropertyType.String;
                 default:
+                    if (field.SoapType.Contains("urn"))
+                    {
+                        return PropertyType.Json;
+                    }
                     return PropertyType.String;
             }
         }
@@ -699,91 +704,89 @@ namespace PluginSalesforce.Plugin
         /// <param name="schema"></param>
         /// <param name="record"></param>
         /// <returns></returns>
-//        private async Task<string> PutRecord(Schema schema, Record record)
-//        {
-//            Dictionary<string, object> recObj;
-//
-//            if (String.IsNullOrEmpty(endpoint.MetaDataPath))
-//            {
-//                try
-//                {
-//                    // check if source has newer record than write back record
-//                    recObj = JsonConvert.DeserializeObject<Dictionary<string, object>>(record.DataJson);
-//
-//                    if (recObj.ContainsKey("id"))
-//                    {
-//                        if (recObj["id"] != null)
-//                        {
-//                            // record already exists, check date then patch it
-//                            var id = recObj["id"];
-//
-//                            // build and send request
-//                            var path = String.Format("{0}/{1}", endpoint.ReadPaths.First(), id);
-//
-//                            var response = await _client.GetAsync(path);
-//                            response.EnsureSuccessStatusCode();
-//
-//                            var srcObj =
-//                                JsonConvert.DeserializeObject<Dictionary<string, object>>(
-//                                    await response.Content.ReadAsStringAsync());
-//
-//                            // get modified key from schema
-//                            var modifiedKey = schema.Properties.First(x => x.IsUpdateCounter);
-//
-//                            if (recObj.ContainsKey(modifiedKey.Id) && srcObj.ContainsKey(modifiedKey.Id))
-//                            {
-//                                if (recObj[modifiedKey.Id] != null && srcObj[modifiedKey.Id] != null)
-//                                {
-//                                    // if source is newer than request exit
-//                                    if (DateTime.Parse(recObj[modifiedKey.Id].ToString()) <=
-//                                        DateTime.Parse(srcObj[modifiedKey.Id].ToString()))
-//                                    {
-//                                        Logger.Info($"Source is newer for record {record.DataJson}");
-//                                        return "source system is newer than requested write back";
-//                                    }
-//                                }
-//                            }
-//
-//                            var patchObj = GetPatchObject(endpoint, recObj);
-//
-//                            var content = new StringContent(JsonConvert.SerializeObject(patchObj), Encoding.UTF8,
-//                                "application/json");
-//
-//                            response = await _client.PatchAsync(path, content);
-//                            response.EnsureSuccessStatusCode();
-//
-//                            Logger.Info("Modified 1 record.");
-//                            return "";
-//                        }
-//                        else
-//                        {
-//                            // record does not exist, create it
-//                            var postObj = GetPostObject(endpoint, recObj);
-//
-//                            var content = new StringContent(JsonConvert.SerializeObject(postObj), Encoding.UTF8,
-//                                "application/json");
-//
-//                            var response = await _client.PostAsync(endpoint.ReadPaths.First(), content);
-//                            response.EnsureSuccessStatusCode();
-//
-//                            Logger.Info("Created 1 record.");
-//                            return "";
-//                        }
-//                    }
-//
-//                    return "Key 'id' not found on requested record to write back.";
-//                }
-//                catch (Exception e)
-//                {
-//                    Logger.Error(e.Message);
-//                    return e.Message;
-//                }
-//            }
-//
-//            // code for modifying forms would go here if needed but currently is not needed
-//
-//            return "Write backs are only supported for Classes.";
-//        }
+        private async Task<string> PutRecord(Schema schema, Record record)
+        {
+            try
+            {
+                // record has id and exists
+                // check if source has newer record than write back record
+                var recObj = JsonConvert.DeserializeObject<Dictionary<string, object>>(record.DataJson);
+
+                var key = schema.Properties.First(x => x.IsKey);
+
+                if (recObj.ContainsKey(key.Id))
+                {
+                    var id = recObj[key.Id];
+
+                    if (id != null)
+                    {
+                        // build and send request
+                        var uri = String.Format("/sobjects/{0}/{1}", schema.Id, id);
+
+                        var response = await _client.GetAsync(uri);
+                        response.EnsureSuccessStatusCode();
+
+                        var srcObj =
+                            JsonConvert.DeserializeObject<Dictionary<string, object>>(
+                                await response.Content.ReadAsStringAsync());
+
+                        // get modified key from schema
+                        var modifiedKey = schema.Properties.First(x => x.IsUpdateCounter);
+
+                        if (recObj.ContainsKey(modifiedKey.Id) && srcObj.ContainsKey(modifiedKey.Id))
+                        {
+                            if (recObj[modifiedKey.Id] != null && srcObj[modifiedKey.Id] != null)
+                            {
+                                // if source is newer than request then exit
+                                if (DateTime.Parse(recObj[modifiedKey.Id].ToString()) <=
+                                    DateTime.Parse(srcObj[modifiedKey.Id].ToString()))
+                                {
+                                    Logger.Info($"Source is newer for record {record.DataJson}");
+                                    return "source system is newer than requested write back";
+                                }
+                            }
+                        }
+
+                        // build and send request
+                        uri = String.Format("/sobjects/{0}/{1}", schema.Id, id);
+
+                        var patchObj = GetPatchObject(schema, recObj);
+
+                        var content = new StringContent(JsonConvert.SerializeObject(patchObj), Encoding.UTF8,
+                            "application/json");
+
+                        response = await _client.PatchAsync(uri, content);
+                        response.EnsureSuccessStatusCode();
+
+                        Logger.Info("Modified 1 record.");
+                        return "";
+                    }
+                    else
+                    {
+                        // record does not have id and needs to be created
+                        var uri = String.Format("/sobjects/{0}", schema.Id);
+
+                        var patchObj = GetPatchObject(schema, recObj);
+
+                        var content = new StringContent(JsonConvert.SerializeObject(patchObj), Encoding.UTF8,
+                            "application/json");
+
+                        var response = await _client.PostAsync(uri, content);
+                        response.EnsureSuccessStatusCode();
+
+                        Logger.Info("Created 1 record.");
+                        return "";
+                    }
+                }
+                
+                return $"Key {key.Id} not found on requested record to write back.";
+            }
+            catch (Exception e)
+            {
+                Logger.Error(e.Message);
+                return e.Message;
+            }
+        }
 
         /// <summary>
         /// Deletes a record from Salesforce
@@ -791,56 +794,75 @@ namespace PluginSalesforce.Plugin
         /// <param name="schema"></param>
         /// <param name="record"></param>
         /// <returns></returns>
-//        private async Task<string> DeleteRecord(Schema schema, Record record)
-//        {
-//            Dictionary<string, object> recObj;
-//            var endpoint = _endpointHelper.GetEndpointForName(schema.Id);
-//
-//            if (String.IsNullOrEmpty(endpoint.MetaDataPath))
-//            {
-//                try
-//                {
-//                    recObj = JsonConvert.DeserializeObject<Dictionary<string, object>>(record.DataJson);
-//
-//                    if (recObj.ContainsKey("id"))
-//                    {
-//                        if (recObj["id"] != null)
-//                        {
-//                            // delete record
-//                            // try each endpoint
-//                            foreach (var path in endpoint.ReadPaths)
-//                            {
-//                                try
-//                                {
-//                                    var uri = String.Format("{0}/{1}", path, recObj["id"]);
-//                                    var response = await _client.DeleteAsync(uri);
-//                                    response.EnsureSuccessStatusCode();
-//
-//                                    Logger.Info("Deleted 1 record.");
-//                                    return "";
-//                                }
-//                                catch (Exception e)
-//                                {
-//                                    Logger.Error(e.Message);
-//                                }
-//                            }
-//                        }
-//
-//                        return "Could not delete record with no id.";
-//                    }
-//
-//                    return "Key 'id' not found on requested record to write back.";
-//                }
-//                catch (Exception e)
-//                {
-//                    Logger.Error(e.Message);
-//                    return e.Message;
-//                }
-//            }
-//
-//            // code for modifying forms would go here if needed but currently is not needed
-//
-//            return "Write backs are only supported for Classes.";
-//        }
+        private async Task<string> DeleteRecord(Schema schema, Record record)
+        {
+            try
+            {
+                var recObj = JsonConvert.DeserializeObject<Dictionary<string, object>>(record.DataJson);
+
+                var key = schema.Properties.First(x => x.IsKey);
+
+                if (recObj.ContainsKey(key.Id))
+                {
+                    if (recObj[key.Id] != null)
+                    {
+                        // delete record
+                        // build and send request
+                        var uri = String.Format("/sobjects/{0}/{1}", schema.Id, recObj[key.Id]);
+
+                        var response = await _client.DeleteAsync(uri);
+                        response.EnsureSuccessStatusCode();
+
+                        Logger.Info("Deleted 1 record.");
+                        return "";
+                    }
+
+                    return "Could not delete record with no id.";
+                }
+
+                return "Key not found on requested record to write back.";
+            }
+            catch (Exception e)
+            {
+                Logger.Error(e.Message);
+                return e.Message;
+            }
+        }
+
+        /// <summary>
+        /// Gets the patch object to send to the update endpoint
+        /// </summary>
+        /// <param name="schema"></param>
+        /// <param name="recObj"></param>
+        /// <returns></returns>
+        private Dictionary<string, object> GetPatchObject(Schema schema, Dictionary<string,object> recObj)
+        {
+            var patchObj = new Dictionary<string, object>();
+            foreach (var property in schema.Properties)
+            {
+                var fieldObj = JsonConvert.DeserializeObject<FieldObject>(property.PublisherMetaJson);
+
+                if (fieldObj.Updateable)
+                {
+                    if (recObj.ContainsKey(property.Id))
+                    {
+                        if (property.Type == PropertyType.String)
+                        {
+                            if (recObj[property.Id] != null)
+                            {
+                                patchObj.Add(property.Id,
+                                    recObj[property.Id].ToString() == "null" ? null : recObj[property.Id]);
+                            }
+                        }
+                        else
+                        {
+                            patchObj.Add(property.Id, recObj[property.Id]);
+                        }
+                    }
+                }
+            }
+
+            return patchObj;
+        }
     }
 }
