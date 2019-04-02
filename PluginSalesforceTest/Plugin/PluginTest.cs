@@ -48,7 +48,7 @@ namespace PluginSalesforceTest.Plugin
             mockHttp.When("https://test.salesforce.com/services/data/v45.0/sobjects/Account/describe")
                 .Respond("application/json", mockHttpHelper.AccountDescribe);
 
-            mockHttp.When("https://test.salesforce.com/services/data/v45.0/query?q=select+Id,Name+from+Account")
+            mockHttp.When("https://test.salesforce.com/services/data/v45.0/query?q=select+Id,Name,LastModifiedDate+from+Account")
                 .Respond("application/json", mockHttpHelper.AccountQuery);
 
             mockHttp.When("https://test.salesforce.com/services/data/v45.0/sobjects/Account/1")
@@ -413,30 +413,18 @@ namespace PluginSalesforceTest.Plugin
                         {
                             Id = "Id",
                             Type = PropertyType.String,
-                            IsKey = true,
-                            PublisherMetaJson = JsonConvert.SerializeObject(new FieldObject
-                            {
-                                Updateable = false
-                            })
+                            IsKey = true
                         },
                         new Property
                         {
                             Id = "Name",
-                            Type = PropertyType.String,
-                            PublisherMetaJson = JsonConvert.SerializeObject(new FieldObject
-                            {
-                                Updateable = true
-                            })
+                            Type = PropertyType.String
                         },
                         new Property
                         {
                             Id = "LastModifiedDate",
                             Type = PropertyType.Datetime,
-                            IsUpdateCounter = true,
-                            PublisherMetaJson = JsonConvert.SerializeObject(new FieldObject
-                            {
-                                Updateable = false
-                            })
+                            IsUpdateCounter = true
                         }
                     }
                 },
@@ -493,30 +481,18 @@ namespace PluginSalesforceTest.Plugin
                         {
                             Id = "Id",
                             Type = PropertyType.String,
-                            IsKey = true,
-                            PublisherMetaJson = JsonConvert.SerializeObject(new FieldObject
-                            {
-                                Updateable = false
-                            })
+                            IsKey = true
                         },
                         new Property
                         {
                             Id = "Name",
-                            Type = PropertyType.String,
-                            PublisherMetaJson = JsonConvert.SerializeObject(new FieldObject
-                            {
-                                Updateable = true
-                            })
+                            Type = PropertyType.String
                         },
                         new Property
                         {
                             Id = "LastModifiedDate",
                             Type = PropertyType.Datetime,
-                            IsUpdateCounter = true,
-                            PublisherMetaJson = JsonConvert.SerializeObject(new FieldObject
-                            {
-                                Updateable = false
-                            })
+                            IsUpdateCounter = true
                         }
                     }
                 },
@@ -554,6 +530,12 @@ namespace PluginSalesforceTest.Plugin
             var client = new Publisher.PublisherClient(channel);
 
             var connectRequest = GetConnectSettings();
+            
+            var discoverSchemasRequest = new DiscoverSchemasRequest
+            {
+                Mode = DiscoverSchemasRequest.Types.Mode.Refresh,
+                ToRefresh = {new Schema {Id = "Account"}}
+            };
 
             var prepareRequest = new PrepareWriteRequest()
             {
@@ -566,30 +548,18 @@ namespace PluginSalesforceTest.Plugin
                         {
                             Id = "Id",
                             Type = PropertyType.String,
-                            IsKey = true,
-                            PublisherMetaJson = JsonConvert.SerializeObject(new FieldObject
-                            {
-                                Updateable = false
-                            })
+                            IsKey = true
                         },
                         new Property
                         {
                             Id = "Name",
-                            Type = PropertyType.String,
-                            PublisherMetaJson = JsonConvert.SerializeObject(new FieldObject
-                            {
-                                Updateable = true
-                            })
+                            Type = PropertyType.String
                         },
                         new Property
                         {
                             Id = "LastModifiedDate",
                             Type = PropertyType.Datetime,
-                            IsUpdateCounter = true,
-                            PublisherMetaJson = JsonConvert.SerializeObject(new FieldObject
-                            {
-                                Updateable = false
-                            })
+                            IsUpdateCounter = true
                         }
                     }
                 },
@@ -612,6 +582,7 @@ namespace PluginSalesforceTest.Plugin
 
             // act
             client.Connect(connectRequest);
+            client.DiscoverSchemas(discoverSchemasRequest);
             client.PrepareWrite(prepareRequest);
 
             using (var call = client.WriteStream())
