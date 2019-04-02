@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
@@ -24,6 +25,7 @@ namespace PluginSalesforce.Plugin
         private readonly HttpClient _injectedClient;
         private readonly ServerStatus _server;
         private TaskCompletionSource<bool> _tcs;
+        private ConcurrentDictionary<string, List<FieldObject>> _fieldObjectsDictionary;
 
         public Plugin(HttpClient client = null)
         {
@@ -33,6 +35,7 @@ namespace PluginSalesforce.Plugin
                 Connected = false,
                 WriteConfigured = false
             };
+            _fieldObjectsDictionary = new ConcurrentDictionary<string, List<FieldObject>>();
         }
 
         /// <summary>
@@ -310,7 +313,7 @@ namespace PluginSalesforce.Plugin
                 Logger.Debug("Getting tabs...");
                 var response = await _client.GetAsync("/tabs");
                 response.EnsureSuccessStatusCode();
-                
+
                 tabsResponse =
                     JsonConvert.DeserializeObject<List<TabObject>>(await response.Content.ReadAsStringAsync());
             }
@@ -361,6 +364,7 @@ namespace PluginSalesforce.Plugin
 
             // return all schemas otherwise
             Logger.Info($"Schemas returned: {discoverSchemasResponse.Schemas.Count}");
+            Logger.Info(JsonConvert.SerializeObject(discoverSchemasResponse));
             return discoverSchemasResponse;
         }
 
@@ -632,6 +636,8 @@ namespace PluginSalesforce.Plugin
                 var describeResponse =
                     JsonConvert.DeserializeObject<DescribeResponse>(await response.Content.ReadAsStringAsync());
 
+                _fieldObjectsDictionary.TryAdd(schema.Id, describeResponse.Fields);
+
                 foreach (var field in describeResponse.Fields)
                 {
                     var property = new Property
@@ -643,8 +649,7 @@ namespace PluginSalesforce.Plugin
                         IsCreateCounter = field.Name == "CreatedDate",
                         IsUpdateCounter = field.Name == "LastModifiedDate",
                         TypeAtSource = field.Type,
-                        IsNullable = field.Nillable,
-                        PublisherMetaJson = JsonConvert.SerializeObject(field)
+                        IsNullable = field.Nillable
                     };
 
                     schema.Properties.Add(property);
@@ -684,12 +689,14 @@ namespace PluginSalesforce.Plugin
                     {
                         return PropertyType.Text;
                     }
+
                     return PropertyType.String;
                 default:
                     if (field.SoapType.Contains("urn"))
                     {
                         return PropertyType.Json;
                     }
+
                     return PropertyType.String;
             }
         }
@@ -774,7 +781,7 @@ namespace PluginSalesforce.Plugin
                         return "";
                     }
                 }
-                
+
                 return $"Key {key.Id} not found on requested record to write back.";
             }
             catch (Exception e)
@@ -831,34 +838,50 @@ namespace PluginSalesforce.Plugin
         /// <param name="schema"></param>
         /// <param name="recObj"></param>
         /// <returns></returns>
-        private Dictionary<string, object> GetPatchObject(Schema schema, Dictionary<string,object> recObj)
+        private Dictionary<string, object> GetPatchObject(Schema schema, Dictionary<string, object> recObj)
         {
-            var patchObj = new Dictionary<string, object>();
-            foreach (var property in schema.Properties)
+            try
             {
-                var fieldObj = JsonConvert.DeserializeObject<FieldObject>(property.PublisherMetaJson);
-
-                if (fieldObj.Updateable)
+                var patchObj = new Dictionary<string, object>();
+            
+                if (_fieldObjectsDictionary.TryGetValue(schema.Id, out List<FieldObject> fields))
                 {
-                    if (recObj.ContainsKey(property.Id))
+                    foreach (var property in schema.Properties)
                     {
-                        if (property.Type == PropertyType.String)
+                        var fieldObj = fields.Find(f => f.Name == property.Id);
+
+                        if (fieldObj.Updateable)
                         {
-                            if (recObj[property.Id] != null)
+                            if (recObj.ContainsKey(property.Id))
                             {
-                                patchObj.Add(property.Id,
-                                    recObj[property.Id].ToString() == "null" ? null : recObj[property.Id]);
+                                if (property.Type == PropertyType.String)
+                                {
+                                    if (recObj[property.Id] != null)
+                                    {
+                                        patchObj.Add(property.Id,
+                                            recObj[property.Id].ToString() == "null" ? null : recObj[property.Id]);
+                                    }
+                                }
+                                else
+                                {
+                                    patchObj.Add(property.Id, recObj[property.Id]);
+                                }
                             }
                         }
-                        else
-                        {
-                            patchObj.Add(property.Id, recObj[property.Id]);
-                        }
                     }
+                    
+                    return patchObj;
+                }
+                else
+                {
+                    throw new Exception($"Unable to get fields meta data for schema {schema.Id}");
                 }
             }
-
-            return patchObj;
+            catch (Exception e)
+            {
+                Logger.Error(e.Message);
+                throw;
+            }
         }
     }
 }
