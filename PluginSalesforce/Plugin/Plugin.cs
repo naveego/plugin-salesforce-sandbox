@@ -364,7 +364,6 @@ namespace PluginSalesforce.Plugin
 
             // return all schemas otherwise
             Logger.Info($"Schemas returned: {discoverSchemasResponse.Schemas.Count}");
-            Logger.Info(JsonConvert.SerializeObject(discoverSchemasResponse));
             return discoverSchemasResponse;
         }
 
@@ -480,7 +479,7 @@ namespace PluginSalesforce.Plugin
         /// <param name="request"></param>
         /// <param name="context"></param>
         /// <returns></returns>
-        public override Task<PrepareWriteResponse> PrepareWrite(PrepareWriteRequest request, ServerCallContext context)
+        public override async Task<PrepareWriteResponse> PrepareWrite(PrepareWriteRequest request, ServerCallContext context)
         {
             Logger.Info("Preparing write...");
             _server.WriteConfigured = false;
@@ -490,12 +489,21 @@ namespace PluginSalesforce.Plugin
                 CommitSLA = request.CommitSlaSeconds,
                 Schema = request.Schema
             };
+            
+            // get fields for module
+            var response = await _client.GetAsync(String.Format("/sobjects/{0}/describe", request.Schema.Id));
+
+            // for each field in the schema add a new property
+            var describeResponse =
+                JsonConvert.DeserializeObject<DescribeResponse>(await response.Content.ReadAsStringAsync());
+
+            _fieldObjectsDictionary.TryAdd(request.Schema.Id, describeResponse.Fields);
 
             _server.WriteSettings = writeSettings;
             _server.WriteConfigured = true;
 
             Logger.Info("Write prepared.");
-            return Task.FromResult(new PrepareWriteResponse());
+            return new PrepareWriteResponse();
         }
 
         /// <summary>
