@@ -24,7 +24,6 @@ namespace PluginSalesforce.Plugin
         private readonly HttpClient _injectedClient;
         private readonly ServerStatus _server;
         private TaskCompletionSource<bool> _tcs;
-        private string _baseUrl;
 
         public Plugin(HttpClient client = null)
         {
@@ -34,7 +33,6 @@ namespace PluginSalesforce.Plugin
                 Connected = false,
                 WriteConfigured = false
             };
-            _baseUrl = String.Empty;
         }
 
         /// <summary>
@@ -312,9 +310,7 @@ namespace PluginSalesforce.Plugin
                 Logger.Debug("Getting tabs...");
                 var response = await _client.GetAsync("/tabs");
                 response.EnsureSuccessStatusCode();
-
-                Logger.Debug(await response.Content.ReadAsStringAsync());
-
+                
                 tabsResponse =
                     JsonConvert.DeserializeObject<List<TabObject>>(await response.Content.ReadAsStringAsync());
             }
@@ -621,7 +617,7 @@ namespace PluginSalesforce.Plugin
                 Logger.Debug($"Getting fields for: {tab.Label}");
 
                 // get fields for module
-                var response = await _client.GetAsync(String.Format("sobjects/{0}/describe", tab.SobjectName));
+                var response = await _client.GetAsync(String.Format("/sobjects/{0}/describe", tab.SobjectName));
 
                 // if response is not found return null
                 if (response.StatusCode == HttpStatusCode.NotFound)
