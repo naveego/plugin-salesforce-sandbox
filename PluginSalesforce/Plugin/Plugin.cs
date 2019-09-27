@@ -180,9 +180,8 @@ namespace PluginSalesforce.Plugin
             _server.Connected = false;
 
             Logger.Info("Connecting...");
-            Logger.Info("Got OAuth State: " + !String.IsNullOrEmpty(request.OauthStateJson));
-            Logger.Info("Got OAuthConfig " +
-                        !String.IsNullOrEmpty(JsonConvert.SerializeObject(request.OauthConfiguration)));
+//            Logger.Info("Got OAuth State: " + request.OauthStateJson);
+//            Logger.Info("Got OAuthConfig " + JsonConvert.SerializeObject(request.OauthConfiguration));
 
             OAuthState oAuthState;
             OAuthConfig oAuthConfig;
@@ -410,60 +409,26 @@ namespace PluginSalesforce.Plugin
                     JsonConvert.DeserializeObject<RecordsResponse>(await response.Content.ReadAsStringAsync());
 
                 records.AddRange(recordsResponse.Records);
+                
+                // Publish records for the given schema
+                recordsCount = await PublishRecords(schema, limitFlag, limit, records, recordsCount, responseStream);
+                records.Clear();
 
                 while (!recordsResponse.Done && _server.Connected)
                 {
-                    response = await _client.GetAsync(recordsResponse.NextRecordsUrl);
+                    response = await _client.GetAsync(recordsResponse.NextRecordsUrl.Replace("/services/data/v45.0", ""));
                     response.EnsureSuccessStatusCode();
 
                     recordsResponse =
                         JsonConvert.DeserializeObject<RecordsResponse>(await response.Content.ReadAsStringAsync());
 
                     records.AddRange(recordsResponse.Records);
+                    
+                    // Publish records for the given schema
+                    recordsCount = await PublishRecords(schema, limitFlag, limit, records, recordsCount, responseStream);
+                    records.Clear();
                 }
-
-                // Publish records for the given schema
-                foreach (var record in records)
-                {
-                    try
-                    {
-                        record.Remove("attributes");
-
-                        foreach (var property in schema.Properties)
-                        {
-                            if (property.Type == PropertyType.String)
-                            {
-                                var value = record[property.Id];
-                                if (!(value is string))
-                                {
-                                    record[property.Id] = JsonConvert.SerializeObject(value);
-                                }
-                            }
-                        }
-                    }
-                    catch (Exception e)
-                    {
-                        Logger.Error(e.Message);
-                        continue;
-                    }
-
-                    var recordOutput = new Record
-                    {
-                        Action = Record.Types.Action.Upsert,
-                        DataJson = JsonConvert.SerializeObject(record)
-                    };
-
-                    // stop publishing if the limit flag is enabled and the limit has been reached
-                    if ((limitFlag && recordsCount == limit) || !_server.Connected)
-                    {
-                        break;
-                    }
-
-                    // publish record
-                    await responseStream.WriteAsync(recordOutput);
-                    recordsCount++;
-                }
-
+                
                 Logger.Info($"Published {recordsCount} records");
             }
             catch (Exception e)
@@ -471,6 +436,53 @@ namespace PluginSalesforce.Plugin
                 Logger.Error(e.Message);
                 throw;
             }
+        }
+
+        private async Task<int> PublishRecords(Schema schema, bool limitFlag, uint limit, List<Dictionary<string, object>> records, int recordsCount, IServerStreamWriter<Record> responseStream)
+        {
+            // Publish records for the given schema
+            foreach (var record in records)
+            {
+                try
+                {
+                    record.Remove("attributes");
+
+                    foreach (var property in schema.Properties)
+                    {
+                        if (property.Type == PropertyType.String)
+                        {
+                            var value = record[property.Id];
+                            if (!(value is string))
+                            {
+                                record[property.Id] = JsonConvert.SerializeObject(value);
+                            }
+                        }
+                    }
+                }
+                catch (Exception e)
+                {
+                    Logger.Error(e.Message);
+                    continue;
+                }
+
+                var recordOutput = new Record
+                {
+                    Action = Record.Types.Action.Upsert,
+                    DataJson = JsonConvert.SerializeObject(record)
+                };
+
+                // stop publishing if the limit flag is enabled and the limit has been reached
+                if ((limitFlag && recordsCount == limit) || !_server.Connected)
+                {
+                    break;
+                }
+
+                // publish record
+                await responseStream.WriteAsync(recordOutput);
+                recordsCount++;
+            }
+
+            return recordsCount;
         }
 
         /// <summary>
