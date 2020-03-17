@@ -192,7 +192,7 @@ namespace PluginSalesforce.Plugin
             }
             catch (Exception e)
             {
-                Logger.Error(e.Message);
+                Logger.Error(e.ToString());
                 return new ConnectResponse
                 {
                     OauthStateJson = request.OauthStateJson,
@@ -218,7 +218,7 @@ namespace PluginSalesforce.Plugin
             }
             catch (Exception e)
             {
-                Logger.Error(e.Message);
+                Logger.Error(e.ToString());
                 return new ConnectResponse
                 {
                     OauthStateJson = request.OauthStateJson,
@@ -235,7 +235,7 @@ namespace PluginSalesforce.Plugin
             }
             catch (Exception e)
             {
-                Logger.Error(e.Message);
+                Logger.Error(e.ToString());
                 throw;
             }
 
@@ -243,7 +243,19 @@ namespace PluginSalesforce.Plugin
             try
             {
                 var response = await _client.GetAsync("/tabs");
-                response.EnsureSuccessStatusCode();
+                if (!response.IsSuccessStatusCode)
+                {
+                    var body = await response.Content.ReadAsStringAsync();
+                    var message = $"Call to /tabs failed with status {response.StatusCode}: {body}";
+                    Logger.Error(body);
+                    return new ConnectResponse
+                    {
+                        OauthStateJson = request.OauthStateJson,
+                        ConnectionError = "desc = " + body,
+                        OauthError = "",
+                        SettingsError = ""
+                    };
+                }
 
                 _server.Connected = true;
 
@@ -251,7 +263,7 @@ namespace PluginSalesforce.Plugin
             }
             catch (Exception e)
             {
-                Logger.Error(e.Message);
+                Logger.Error(e.ToString());
 
                 return new ConnectResponse
                 {
