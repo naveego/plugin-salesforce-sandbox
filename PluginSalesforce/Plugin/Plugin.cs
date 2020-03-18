@@ -773,7 +773,7 @@ namespace PluginSalesforce.Plugin
                             if (recObj[modifiedKey.Id] != null && srcObj[modifiedKey.Id] != null)
                             {
                                 // if source is newer than request then exit
-                                if (DateTime.Parse(recObj[modifiedKey.Id].ToString()) <=
+                                if (DateTime.Parse(recObj[modifiedKey.Id].ToString()) <
                                     DateTime.Parse(srcObj[modifiedKey.Id].ToString()))
                                 {
                                     Logger.Info($"Source is newer for record {record.DataJson}");
