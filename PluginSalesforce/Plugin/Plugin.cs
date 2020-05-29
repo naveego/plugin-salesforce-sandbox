@@ -11,11 +11,12 @@ using System.Threading.Tasks;
 using System.Web;
 using Google.Protobuf.WellKnownTypes;
 using Grpc.Core;
+using Naveego.Sdk.Plugins;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using PluginSalesforce.DataContracts;
 using PluginSalesforce.Helper;
-using Pub;
+
 
 namespace PluginSalesforce.Plugin
 {
@@ -97,7 +98,7 @@ namespace PluginSalesforce.Plugin
             }
             catch (Exception e)
             {
-                Logger.Error(e.Message);
+                Logger.Error(e, e.Message);
                 throw;
             }
 
@@ -154,7 +155,7 @@ namespace PluginSalesforce.Plugin
             }
             catch (Exception e)
             {
-                Logger.Error(e.Message);
+                Logger.Error(e, e.Message);
                 throw;
             }
 
@@ -180,6 +181,7 @@ namespace PluginSalesforce.Plugin
             _server.Connected = false;
 
             Logger.Info("Connecting...");
+            Logger.Info(JsonConvert.SerializeObject(request, Formatting.Indented));
 //            Logger.Info("Got OAuth State: " + request.OauthStateJson);
 //            Logger.Info("Got OAuthConfig " + JsonConvert.SerializeObject(request.OauthConfiguration));
 
@@ -192,7 +194,7 @@ namespace PluginSalesforce.Plugin
             }
             catch (Exception e)
             {
-                Logger.Error(e.ToString());
+                Logger.Error(e, e.Message, context);
                 return new ConnectResponse
                 {
                     OauthStateJson = request.OauthStateJson,
@@ -218,7 +220,7 @@ namespace PluginSalesforce.Plugin
             }
             catch (Exception e)
             {
-                Logger.Error(e.ToString());
+                Logger.Error(e, e.Message, context);
                 return new ConnectResponse
                 {
                     OauthStateJson = request.OauthStateJson,
@@ -235,8 +237,14 @@ namespace PluginSalesforce.Plugin
             }
             catch (Exception e)
             {
-                Logger.Error(e.ToString());
-                throw;
+                Logger.Error(e, e.Message, context);
+                return new ConnectResponse
+                {
+                    OauthStateJson = request.OauthStateJson,
+                    ConnectionError = "",
+                    OauthError = "",
+                    SettingsError = e.Message
+                };
             }
 
             // attempt to call the Salesforce api
@@ -247,7 +255,7 @@ namespace PluginSalesforce.Plugin
                 {
                     var body = await response.Content.ReadAsStringAsync();
                     var message = $"Call to /tabs failed with status {response.StatusCode}: {body}";
-                    Logger.Error(body);
+                    Logger.Error(null, body);
                     return new ConnectResponse
                     {
                         OauthStateJson = request.OauthStateJson,
@@ -263,7 +271,7 @@ namespace PluginSalesforce.Plugin
             }
             catch (Exception e)
             {
-                Logger.Error(e.ToString());
+                Logger.Error(e, e.Message, context);
 
                 return new ConnectResponse
                 {
@@ -313,6 +321,7 @@ namespace PluginSalesforce.Plugin
         public override async Task<DiscoverSchemasResponse> DiscoverSchemas(DiscoverSchemasRequest request,
             ServerCallContext context)
         {
+            Logger.SetLogPrefix("discover");
             Logger.Info("Discovering Schemas...");
 
             DiscoverSchemasResponse discoverSchemasResponse = new DiscoverSchemasResponse();
@@ -330,8 +339,8 @@ namespace PluginSalesforce.Plugin
             }
             catch (Exception e)
             {
-                Logger.Error(e.Message);
-                throw;
+                Logger.Error(e, e.Message, context);
+                return new DiscoverSchemasResponse();
             }
 
             // attempt to get a schema for each tab found
@@ -348,8 +357,8 @@ namespace PluginSalesforce.Plugin
             }
             catch (Exception e)
             {
-                Logger.Error(e.Message);
-                throw;
+                Logger.Error(e, e.Message, context);
+                return new DiscoverSchemasResponse();
             }
 
             Logger.Info($"Schemas found: {discoverSchemasResponse.Schemas.Count}");
@@ -391,7 +400,8 @@ namespace PluginSalesforce.Plugin
             var schema = request.Schema;
             var limit = request.Limit;
             var limitFlag = request.Limit != 0;
-
+            
+            Logger.SetLogPrefix(request.JobId);
             Logger.Info($"Publishing records for schema: {schema.Name}");
 
             try
@@ -445,8 +455,7 @@ namespace PluginSalesforce.Plugin
             }
             catch (Exception e)
             {
-                Logger.Error(e.Message);
-                throw;
+                Logger.Error(e, e.Message, context);
             }
         }
 
@@ -473,7 +482,7 @@ namespace PluginSalesforce.Plugin
                 }
                 catch (Exception e)
                 {
-                    Logger.Error(e.Message);
+                    Logger.Error(e, e.Message);
                     continue;
                 }
 
@@ -505,6 +514,7 @@ namespace PluginSalesforce.Plugin
         /// <returns></returns>
         public override async Task<PrepareWriteResponse> PrepareWrite(PrepareWriteRequest request, ServerCallContext context)
         {
+            Logger.SetLogPrefix(request.DataVersions.JobId);
             Logger.Info("Preparing write...");
             _server.WriteConfigured = false;
 
@@ -601,8 +611,7 @@ namespace PluginSalesforce.Plugin
             }
             catch (Exception e)
             {
-                Logger.Error(e.Message);
-                throw;
+                Logger.Error(e, e.Message, context);
             }
         }
 
@@ -692,7 +701,7 @@ namespace PluginSalesforce.Plugin
             }
             catch (Exception e)
             {
-                Logger.Error(e.Message);
+                Logger.Error(e, e.Message);
                 return null;
             }
         }
@@ -818,7 +827,7 @@ namespace PluginSalesforce.Plugin
             }
             catch (Exception e)
             {
-                Logger.Error(e.Message);
+                Logger.Error(e, e.Message);
                 return e.Message;
             }
         }
@@ -859,7 +868,7 @@ namespace PluginSalesforce.Plugin
             }
             catch (Exception e)
             {
-                Logger.Error(e.Message);
+                Logger.Error(e, e.Message);
                 return e.Message;
             }
         }
@@ -911,7 +920,7 @@ namespace PluginSalesforce.Plugin
             }
             catch (Exception e)
             {
-                Logger.Error(e.Message);
+                Logger.Error(e, e.Message);
                 throw;
             }
         }
