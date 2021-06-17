@@ -13,6 +13,7 @@
   "accessGroups": [],
   "canProduceMultipleSchemas": true,
   "canAcceptQueryBasedSchemas": false,
+  "canConfigure": true,
   "canUseOAuth": true,
   "canWrite": true,
   "configSchema": {
