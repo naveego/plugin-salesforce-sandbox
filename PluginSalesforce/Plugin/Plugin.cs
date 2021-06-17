@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
@@ -11,6 +12,7 @@ using System.Threading.Tasks;
 using System.Web;
 using Google.Protobuf.WellKnownTypes;
 using Grpc.Core;
+using Naveego.Sdk.Logging;
 using Naveego.Sdk.Plugins;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
@@ -98,7 +100,7 @@ namespace PluginSalesforce.Plugin
             }
             catch (Exception e)
             {
-                Logger.Error(e, e.Message);
+                Logger.Error(e, e.Message, context);
                 throw;
             }
 
@@ -155,7 +157,7 @@ namespace PluginSalesforce.Plugin
             }
             catch (Exception e)
             {
-                Logger.Error(e, e.Message);
+                Logger.Error(e, e.Message, context);
                 throw;
             }
 
@@ -168,6 +170,32 @@ namespace PluginSalesforce.Plugin
             Logger.Info("Got Auth Token and Refresh Token");
 
             return oAuthResponse;
+        }
+        
+        /// <summary>
+        /// Configures the plugin
+        /// </summary>
+        /// <param name="request"></param>
+        /// <param name="context"></param>
+        /// <returns></returns>
+        public override Task<ConfigureResponse> Configure(ConfigureRequest request, ServerCallContext context)
+        {
+            Logger.Debug("Got configure request");
+            Logger.Debug(JsonConvert.SerializeObject(request, Formatting.Indented));
+
+            // ensure all directories are created
+            Directory.CreateDirectory(request.TemporaryDirectory);
+            Directory.CreateDirectory(request.PermanentDirectory);
+            Directory.CreateDirectory(request.LogDirectory);
+            
+
+            // configure logger
+            Logger.SetLogLevel(request.LogLevel);
+            Logger.Init(request.LogDirectory);
+
+            _server.Config = request;
+
+            return Task.FromResult(new ConfigureResponse());
         }
 
         /// <summary>
