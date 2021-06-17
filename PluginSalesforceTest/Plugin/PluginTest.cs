@@ -245,6 +245,15 @@ namespace PluginSalesforceTest.Plugin
 
             var channel = new Channel($"localhost:{port}", ChannelCredentials.Insecure);
             var client = new Publisher.PublisherClient(channel);
+            
+            var configureRequest = new ConfigureRequest
+            {
+                TemporaryDirectory = "../../../Temp",
+                PermanentDirectory = "../../../Perm",
+                LogDirectory = "../../../Logs",
+                DataVersions = new DataVersions(),
+                LogLevel = LogLevel.Debug
+            };
 
             var connectRequest = GetConnectSettings();
 
@@ -254,6 +263,7 @@ namespace PluginSalesforceTest.Plugin
             };
 
             // act
+            client.Configure(configureRequest);
             client.Connect(connectRequest);
             var response = client.DiscoverSchemas(request);
 

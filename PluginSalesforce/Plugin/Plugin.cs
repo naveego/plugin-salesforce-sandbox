@@ -89,6 +89,7 @@ namespace PluginSalesforce.Plugin
             ServerCallContext context)
         {
             Logger.Info("Getting Auth and Refresh Token...");
+            Logger.Info($"Redirect url: {request.RedirectUrl}");
 
             // get code from redirect url
             string code;
@@ -134,7 +135,12 @@ namespace PluginSalesforce.Plugin
                 client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
 
                 var response = await client.PostAsync(tokenUrl, body);
-                response.EnsureSuccessStatusCode();
+
+                if (!response.IsSuccessStatusCode)
+                {
+                    Logger.Info(await response.Content.ReadAsStringAsync());
+                    response.EnsureSuccessStatusCode();
+                }
 
                 var content = JsonConvert.DeserializeObject<TokenResponse>(await response.Content.ReadAsStringAsync());
 
