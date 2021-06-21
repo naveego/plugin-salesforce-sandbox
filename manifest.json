@@ -6,7 +6,7 @@
   "versionDescription": "Version 1",
   "version": "1.2.1",
   "iconFile": "icon.png",
-  "executable": "PluginSalesforce",
+  "executable": "PluginSalesforceSandbox",
   "kind": "publisher",
   "os": "$GOOS",
   "arch": "$GOARCH",
