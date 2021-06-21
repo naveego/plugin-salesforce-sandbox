@@ -16,11 +16,11 @@ using Naveego.Sdk.Logging;
 using Naveego.Sdk.Plugins;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
-using PluginSalesforce.DataContracts;
-using PluginSalesforce.Helper;
+using PluginSalesforceSandbox.DataContracts;
+using PluginSalesforceSandbox.Helper;
 
 
-namespace PluginSalesforce.Plugin
+namespace PluginSalesforceSandbox.Plugin
 {
     public class Plugin : Publisher.PublisherBase
     {
@@ -61,7 +61,7 @@ namespace PluginSalesforce.Plugin
 
             // build auth url
             var authUrl = String.Format(
-                "https://login.salesforce.com/services/oauth2/authorize?client_id={0}&response_type={1}&redirect_uri={2}&prompt={3}&display={4}",
+                "https://test.salesforce.com/services/oauth2/authorize?client_id={0}&response_type={1}&redirect_uri={2}&prompt={3}&display={4}",
                 clientId,
                 responseType,
                 redirectUrl,
@@ -113,7 +113,7 @@ namespace PluginSalesforce.Plugin
             var grantType = "authorization_code";
 
             // build token url
-            var tokenUrl = "https://login.salesforce.com/services/oauth2/token";
+            var tokenUrl = "https://test.salesforce.com/services/oauth2/token";
 
             // build form data request
             var formData = new List<KeyValuePair<string, string>>

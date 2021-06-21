@@ -3,10 +3,10 @@ using System.Linq;
 using Grpc.Core;
 using Naveego.Sdk.Logging;
 using Naveego.Sdk.Plugins;
-using PluginSalesforce.Helper;
+using PluginSalesforceSandbox.Helper;
 
 
-namespace PluginSalesforce
+namespace PluginSalesforceSandbox
 {
     class Program
     {

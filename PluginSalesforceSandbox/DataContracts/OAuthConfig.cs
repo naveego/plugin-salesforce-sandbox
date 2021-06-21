@@ -1,4 +1,4 @@
-namespace PluginSalesforce.DataContracts
+namespace PluginSalesforceSandbox.DataContracts
 {
     public class OAuthConfig
     {

@@ -2,11 +2,11 @@ using System;
 using System.Net;
 using System.Net.Http;
 using System.Threading.Tasks;
-using PluginSalesforce.Helper;
+using PluginSalesforceSandbox.Helper;
 using RichardSzalay.MockHttp;
 using Xunit;
 
-namespace PluginSalesforceTest.Helper
+namespace PluginSalesforceSandboxTest.Helper
 {
     public class AuthenticatorTest
     {
@@ -16,7 +16,7 @@ namespace PluginSalesforceTest.Helper
             // setup
             var mockHttp = new MockHttpMessageHandler();
 
-            mockHttp.When("https://login.salesforce.com/services/oauth2/token")
+            mockHttp.When("https://test.salesforce.com/services/oauth2/token")
                 .Respond("application/json", "{\"access_token\":\"mocktoken\"}");
 
             var auth = new Authenticator(new Settings{ ClientId = "client", ClientSecret = "secret", RefreshToken = "refresh"}, mockHttp.ToHttpClient());
@@ -38,7 +38,7 @@ namespace PluginSalesforceTest.Helper
             // setup
             var mockHttp = new MockHttpMessageHandler();
 
-            mockHttp.When("https://login.salesforce.com/services/oauth2/token")
+            mockHttp.When("https://test.salesforce.com/services/oauth2/token")
                 .Respond(HttpStatusCode.Forbidden);
 
             var auth = new Authenticator(new Settings{ ClientId = "client", ClientSecret = "secret", RefreshToken = "refresh"}, mockHttp.ToHttpClient());

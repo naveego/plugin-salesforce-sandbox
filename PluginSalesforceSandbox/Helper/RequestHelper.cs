@@ -4,7 +4,7 @@ using System.Net.Http.Headers;
 using System.Threading.Tasks;
 using Naveego.Sdk.Logging;
 
-namespace PluginSalesforce.Helper
+namespace PluginSalesforceSandbox.Helper
 {
     public class RequestHelper
     {

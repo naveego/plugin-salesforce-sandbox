@@ -1,6 +1,6 @@
 using System;
 
-namespace PluginSalesforce.Helper
+namespace PluginSalesforceSandbox.Helper
 {
     public class Settings
     {

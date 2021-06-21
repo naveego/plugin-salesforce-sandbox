@@ -1,4 +1,4 @@
-namespace PluginSalesforceTest.Plugin
+namespace PluginSalesforceSandboxTest.Plugin
 {
     public class MockHttpHelper
     {

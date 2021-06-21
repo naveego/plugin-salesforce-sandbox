@@ -5,9 +5,9 @@ using System.Net.Http.Headers;
 using System.Threading.Tasks;
 using Naveego.Sdk.Logging;
 using Newtonsoft.Json;
-using PluginSalesforce.DataContracts;
+using PluginSalesforceSandbox.DataContracts;
 
-namespace PluginSalesforce.Helper
+namespace PluginSalesforceSandbox.Helper
 {
     public class Authenticator
     {
@@ -36,7 +36,7 @@ namespace PluginSalesforce.Helper
                 try
                 {
                     // get a token
-                    var requestUri = "https://login.salesforce.com/services/oauth2/token";
+                    var requestUri = "https://test.salesforce.com/services/oauth2/token";
 
                     var formData = new List<KeyValuePair<string, string>>
                     {

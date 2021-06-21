@@ -1,8 +1,8 @@
 using System;
-using PluginSalesforce.Helper;
+using PluginSalesforceSandbox.Helper;
 using Xunit;
 
-namespace PluginSalesforceTest.Helper
+namespace PluginSalesforceSandboxTest.Helper
 {
     public class SettingsTest
     {

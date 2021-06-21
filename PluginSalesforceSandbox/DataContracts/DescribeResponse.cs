@@ -1,7 +1,7 @@
 using System.Collections.Generic;
 using Newtonsoft.Json;
 
-namespace PluginSalesforce.DataContracts
+namespace PluginSalesforceSandbox.DataContracts
 {
     public class DescribeResponse
     {

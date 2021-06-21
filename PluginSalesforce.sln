@@ -1,8 +1,8 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PluginSalesforce", "PluginSalesforce\PluginSalesforce.csproj", "{C607CEF0-20DA-43C4-A7D8-0409A35B679D}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PluginSalesforceSandbox", "PluginSalesforceSandbox\PluginSalesforceSandbox.csproj", "{C607CEF0-20DA-43C4-A7D8-0409A35B679D}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PluginSalesforceTest", "PluginSalesforceTest\PluginSalesforceTest.csproj", "{F8154C98-C2B2-49EE-AFD6-E0825C4240E2}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PluginSalesforceSandboxTest", "PluginSalesforceSandboxTest\PluginSalesforceSandboxTest.csproj", "{F8154C98-C2B2-49EE-AFD6-E0825C4240E2}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

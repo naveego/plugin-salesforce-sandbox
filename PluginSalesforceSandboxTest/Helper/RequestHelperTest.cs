@@ -2,11 +2,11 @@ using System;
 using System.Net;
 using System.Net.Http;
 using System.Threading.Tasks;
-using PluginSalesforce.Helper;
+using PluginSalesforceSandbox.Helper;
 using RichardSzalay.MockHttp;
 using Xunit;
 
-namespace PluginSalesforceTest.Helper
+namespace PluginSalesforceSandboxTest.Helper
 {
     public class RequestHelperTest
     {
@@ -16,7 +16,7 @@ namespace PluginSalesforceTest.Helper
             // setup
             var mockHttp = new MockHttpMessageHandler();
             
-            mockHttp.When("https://login.salesforce.com/services/oauth2/token")
+            mockHttp.When("https://test.salesforce.com/services/oauth2/token")
                 .Respond("application/json", "{\"access_token\":\"mocktoken\"}");
             
             mockHttp.When("https://test.salesforce.com/services/data/v45.0/test")
@@ -37,7 +37,7 @@ namespace PluginSalesforceTest.Helper
             // setup
             var mockHttp = new MockHttpMessageHandler();
             
-            mockHttp.When("https://login.salesforce.com/services/oauth2/token")
+            mockHttp.When("https://test.salesforce.com/services/oauth2/token")
                 .Respond(HttpStatusCode.Forbidden);
 
             mockHttp.When("https://test.salesforce.com/services/data/v45.0/test")
@@ -58,7 +58,7 @@ namespace PluginSalesforceTest.Helper
             // setup
             var mockHttp = new MockHttpMessageHandler();
             
-            mockHttp.When("https://login.salesforce.com/services/oauth2/token")
+            mockHttp.When("https://test.salesforce.com/services/oauth2/token")
                 .Respond("application/json", "{\"access_token\":\"mocktoken\"}");
             
             mockHttp.When("https://test.salesforce.com/services/data/v45.0/test")

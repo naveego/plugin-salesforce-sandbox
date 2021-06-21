@@ -6,14 +6,14 @@ using System.Threading.Tasks;
 using Grpc.Core;
 using Naveego.Sdk.Plugins;
 using Newtonsoft.Json;
-using PluginSalesforce.DataContracts;
+using PluginSalesforceSandbox.DataContracts;
 
 using RichardSzalay.MockHttp;
 using Xunit;
 using Record = Naveego.Sdk.Plugins.Record;
 
 
-namespace PluginSalesforceTest.Plugin
+namespace PluginSalesforceSandboxTest.Plugin
 {
     public class PluginTest
     {
@@ -38,7 +38,7 @@ namespace PluginSalesforceTest.Plugin
             var mockHttpHelper = new MockHttpHelper();
             var mockHttp = new MockHttpMessageHandler();
 
-            mockHttp.When("https://login.salesforce.com/services/oauth2/token")
+            mockHttp.When("https://test.salesforce.com/services/oauth2/token")
                 .Respond("application/json", mockHttpHelper.Token);
 
             mockHttp.When("https://test.salesforce.com/services/data/v45.0/tabs")
@@ -67,7 +67,7 @@ namespace PluginSalesforceTest.Plugin
 
             Server server = new Server
             {
-                Services = {Publisher.BindService(new PluginSalesforce.Plugin.Plugin(mockHttp.ToHttpClient()))},
+                Services = {Publisher.BindService(new PluginSalesforceSandbox.Plugin.Plugin(mockHttp.ToHttpClient()))},
                 Ports = {new ServerPort("localhost", 0, ServerCredentials.Insecure)}
             };
             server.Start();
@@ -95,7 +95,7 @@ namespace PluginSalesforceTest.Plugin
             var display = "popup";
 
             var authUrl = String.Format(
-                "https://login.salesforce.com/services/oauth2/authorize?client_id={0}&response_type={1}&redirect_uri={2}&prompt={3}&display={4}",
+                "https://test.salesforce.com/services/oauth2/authorize?client_id={0}&response_type={1}&redirect_uri={2}&prompt={3}&display={4}",
                 clientId,
                 responseType,
                 redirectUrl,
@@ -122,7 +122,7 @@ namespace PluginSalesforceTest.Plugin
 
             Server server = new Server
             {
-                Services = {Publisher.BindService(new PluginSalesforce.Plugin.Plugin(mockHttp.ToHttpClient()))},
+                Services = {Publisher.BindService(new PluginSalesforceSandbox.Plugin.Plugin(mockHttp.ToHttpClient()))},
                 Ports = {new ServerPort("localhost", 0, ServerCredentials.Insecure)}
             };
             server.Start();
@@ -165,7 +165,7 @@ namespace PluginSalesforceTest.Plugin
 
             Server server = new Server
             {
-                Services = {Publisher.BindService(new PluginSalesforce.Plugin.Plugin(mockHttp.ToHttpClient()))},
+                Services = {Publisher.BindService(new PluginSalesforceSandbox.Plugin.Plugin(mockHttp.ToHttpClient()))},
                 Ports = {new ServerPort("localhost", 0, ServerCredentials.Insecure)}
             };
             server.Start();
@@ -205,7 +205,7 @@ namespace PluginSalesforceTest.Plugin
 
             Server server = new Server
             {
-                Services = {Publisher.BindService(new PluginSalesforce.Plugin.Plugin(mockHttp.ToHttpClient()))},
+                Services = {Publisher.BindService(new PluginSalesforceSandbox.Plugin.Plugin(mockHttp.ToHttpClient()))},
                 Ports = {new ServerPort("localhost", 0, ServerCredentials.Insecure)}
             };
             server.Start();
@@ -236,7 +236,7 @@ namespace PluginSalesforceTest.Plugin
 
             Server server = new Server
             {
-                Services = {Publisher.BindService(new PluginSalesforce.Plugin.Plugin(mockHttp.ToHttpClient()))},
+                Services = {Publisher.BindService(new PluginSalesforceSandbox.Plugin.Plugin(mockHttp.ToHttpClient()))},
                 Ports = {new ServerPort("localhost", 0, ServerCredentials.Insecure)}
             };
             server.Start();
@@ -284,7 +284,7 @@ namespace PluginSalesforceTest.Plugin
 
             Server server = new Server
             {
-                Services = {Publisher.BindService(new PluginSalesforce.Plugin.Plugin(mockHttp.ToHttpClient()))},
+                Services = {Publisher.BindService(new PluginSalesforceSandbox.Plugin.Plugin(mockHttp.ToHttpClient()))},
                 Ports = {new ServerPort("localhost", 0, ServerCredentials.Insecure)}
             };
             server.Start();
@@ -323,7 +323,7 @@ namespace PluginSalesforceTest.Plugin
 
             Server server = new Server
             {
-                Services = {Publisher.BindService(new PluginSalesforce.Plugin.Plugin(mockHttp.ToHttpClient()))},
+                Services = {Publisher.BindService(new PluginSalesforceSandbox.Plugin.Plugin(mockHttp.ToHttpClient()))},
                 Ports = {new ServerPort("localhost", 0, ServerCredentials.Insecure)}
             };
             server.Start();
@@ -402,7 +402,7 @@ namespace PluginSalesforceTest.Plugin
 
             Server server = new Server
             {
-                Services = {Publisher.BindService(new PluginSalesforce.Plugin.Plugin(mockHttp.ToHttpClient()))},
+                Services = {Publisher.BindService(new PluginSalesforceSandbox.Plugin.Plugin(mockHttp.ToHttpClient()))},
                 Ports = {new ServerPort("localhost", 0, ServerCredentials.Insecure)}
             };
             server.Start();
@@ -470,7 +470,7 @@ namespace PluginSalesforceTest.Plugin
 
             Server server = new Server
             {
-                Services = {Publisher.BindService(new PluginSalesforce.Plugin.Plugin(mockHttp.ToHttpClient()))},
+                Services = {Publisher.BindService(new PluginSalesforceSandbox.Plugin.Plugin(mockHttp.ToHttpClient()))},
                 Ports = {new ServerPort("localhost", 0, ServerCredentials.Insecure)}
             };
             server.Start();
@@ -531,7 +531,7 @@ namespace PluginSalesforceTest.Plugin
 
             Server server = new Server
             {
-                Services = {Publisher.BindService(new PluginSalesforce.Plugin.Plugin(mockHttp.ToHttpClient()))},
+                Services = {Publisher.BindService(new PluginSalesforceSandbox.Plugin.Plugin(mockHttp.ToHttpClient()))},
                 Ports = {new ServerPort("localhost", 0, ServerCredentials.Insecure)}
             };
             server.Start();
@@ -635,7 +635,7 @@ namespace PluginSalesforceTest.Plugin
 
             Server server = new Server
             {
-                Services = {Publisher.BindService(new PluginSalesforce.Plugin.Plugin(mockHttp.ToHttpClient()))},
+                Services = {Publisher.BindService(new PluginSalesforceSandbox.Plugin.Plugin(mockHttp.ToHttpClient()))},
                 Ports = {new ServerPort("localhost", 0, ServerCredentials.Insecure)}
             };
             server.Start();

@@ -1,6 +1,6 @@
 using Naveego.Sdk.Plugins;
 
-namespace PluginSalesforce.Helper
+namespace PluginSalesforceSandbox.Helper
 {
     public class ServerStatus
     {

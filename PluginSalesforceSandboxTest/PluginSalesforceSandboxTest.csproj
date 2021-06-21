@@ -19,7 +19,7 @@
     </ItemGroup>
 
     <ItemGroup>
-      <ProjectReference Include="..\PluginSalesforce\PluginSalesforce.csproj" />
+      <ProjectReference Include="..\PluginSalesforceSandbox\PluginSalesforceSandbox.csproj" />
     </ItemGroup>
 
     <ItemGroup>
