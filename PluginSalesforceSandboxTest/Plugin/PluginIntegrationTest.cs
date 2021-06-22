@@ -15,7 +15,7 @@ using Record = Naveego.Sdk.Plugins.Record;
 
 namespace PluginSalesforceSandboxTest.Plugin
 {
-    public class PluginTest
+    public class PluginIntegrationTest
     {
         private ConnectRequest GetConnectSettings()
         {
@@ -24,148 +24,29 @@ namespace PluginSalesforceSandboxTest.Plugin
                 SettingsJson = "",
                 OauthConfiguration = new OAuthConfiguration
                 {
-                    ClientId = "client",
-                    ClientSecret = "secret",
+                    ClientId = "",
+                    ClientSecret = "",
                     ConfigurationJson = "{}"
                 },
-                OauthStateJson =
-                    "{\"RefreshToken\":\"refresh\",\"AuthToken\":\"\",\"Config\":\"{\\\"InstanceUrl\\\":\\\"https://test.salesforce.com\\\"}\"}"
-            };
-        }
-
-        private MockHttpMessageHandler GetMockHttpMessageHandler()
-        {
-            var mockHttpHelper = new MockHttpHelper();
-            var mockHttp = new MockHttpMessageHandler();
-
-            mockHttp.When("https://test.salesforce.com/services/oauth2/token")
-                .Respond("application/json", mockHttpHelper.Token);
-
-            mockHttp.When("https://test.salesforce.com/services/data/v52.0/tabs")
-                .Respond("application/json", mockHttpHelper.Tabs);
-
-            mockHttp.When("https://test.salesforce.com/services/data/v52.0/sobjects/Lead/describe")
-                .Respond("application/json", mockHttpHelper.LeadDescribe);
-
-            mockHttp.When("https://test.salesforce.com/services/data/v52.0/sobjects/Account/describe")
-                .Respond("application/json", mockHttpHelper.AccountDescribe);
-
-            mockHttp.When("https://test.salesforce.com/services/data/v52.0/query?q=select+Id,Name,LastModifiedDate+from+Account")
-                .Respond("application/json", mockHttpHelper.AccountQuery);
-
-            mockHttp.When("https://test.salesforce.com/services/data/v52.0/sobjects/Account/1")
-                .Respond("application/json", mockHttpHelper.AccountById);
-
-            return mockHttp;
-        }
-
-        [Fact]
-        public async Task BeginOAuthFlowTest()
-        {
-            // setup
-            var mockHttp = GetMockHttpMessageHandler();
-
-            Server server = new Server
-            {
-                Services = {Publisher.BindService(new PluginSalesforceSandbox.Plugin.Plugin(mockHttp.ToHttpClient()))},
-                Ports = {new ServerPort("localhost", 0, ServerCredentials.Insecure)}
-            };
-            server.Start();
-
-            var port = server.Ports.First().BoundPort;
-
-            var channel = new Channel($"localhost:{port}", ChannelCredentials.Insecure);
-            var client = new Publisher.PublisherClient(channel);
-
-            var request = new BeginOAuthFlowRequest()
-            {
-                Configuration = new OAuthConfiguration
+                OauthStateJson = JsonConvert.SerializeObject(new OAuthState
                 {
-                    ClientId = "client",
-                    ClientSecret = "secret",
-                    ConfigurationJson = "{}"
-                },
-                RedirectUrl = "http://test.com"
+                    AuthToken = "",
+                    RefreshToken = "",
+                    Config = JsonConvert.SerializeObject(new OAuthConfig
+                    {
+                        InstanceUrl = ""
+                    })
+                })
             };
-
-            var clientId = request.Configuration.ClientId;
-            var responseType = "code";
-            var redirectUrl = request.RedirectUrl;
-            var prompt = "consent";
-            var display = "popup";
-
-            var authUrl = String.Format(
-                "https://test.salesforce.com/services/oauth2/authorize?client_id={0}&response_type={1}&redirect_uri={2}&prompt={3}&display={4}",
-                clientId,
-                responseType,
-                redirectUrl,
-                prompt,
-                display);
-
-            // act
-            var response = client.BeginOAuthFlow(request);
-
-            // assert
-            Assert.IsType<BeginOAuthFlowResponse>(response);
-            Assert.Equal(authUrl, response.AuthorizationUrl);
-
-            // cleanup
-            await channel.ShutdownAsync();
-            await server.ShutdownAsync();
         }
-
-        [Fact]
-        public async Task CompleteOAuthFlowTest()
-        {
-            // setup
-            var mockHttp = GetMockHttpMessageHandler();
-
-            Server server = new Server
-            {
-                Services = {Publisher.BindService(new PluginSalesforceSandbox.Plugin.Plugin(mockHttp.ToHttpClient()))},
-                Ports = {new ServerPort("localhost", 0, ServerCredentials.Insecure)}
-            };
-            server.Start();
-
-            var port = server.Ports.First().BoundPort;
-
-            var channel = new Channel($"localhost:{port}", ChannelCredentials.Insecure);
-            var client = new Publisher.PublisherClient(channel);
-
-            var completeRequest = new CompleteOAuthFlowRequest
-            {
-                Configuration = new OAuthConfiguration
-                {
-                    ClientId = "client",
-                    ClientSecret = "secret",
-                    ConfigurationJson = "{}"
-                },
-                RedirectUrl = "http://test.com?code=authcode",
-                RedirectBody = ""
-            };
-
-            // act
-            var response = client.CompleteOAuthFlow(completeRequest);
-
-            // assert
-            Assert.IsType<CompleteOAuthFlowResponse>(response);
-            Assert.Contains("mocktoken", response.OauthStateJson);
-            Assert.Contains("mocktoken", response.OauthStateJson);
-
-            // cleanup
-            await channel.ShutdownAsync();
-            await server.ShutdownAsync();
-        }
-
+        
         [Fact]
         public async Task ConnectSessionTest()
         {
             // setup
-            var mockHttp = GetMockHttpMessageHandler();
-
             Server server = new Server
             {
-                Services = {Publisher.BindService(new PluginSalesforceSandbox.Plugin.Plugin(mockHttp.ToHttpClient()))},
+                Services = {Publisher.BindService(new PluginSalesforceSandbox.Plugin.Plugin())},
                 Ports = {new ServerPort("localhost", 0, ServerCredentials.Insecure)}
             };
             server.Start();
@@ -200,12 +81,9 @@ namespace PluginSalesforceSandboxTest.Plugin
         [Fact]
         public async Task ConnectTest()
         {
-            // setup
-            var mockHttp = GetMockHttpMessageHandler();
-
             Server server = new Server
             {
-                Services = {Publisher.BindService(new PluginSalesforceSandbox.Plugin.Plugin(mockHttp.ToHttpClient()))},
+                Services = {Publisher.BindService(new PluginSalesforceSandbox.Plugin.Plugin())},
                 Ports = {new ServerPort("localhost", 0, ServerCredentials.Insecure)}
             };
             server.Start();
@@ -232,11 +110,9 @@ namespace PluginSalesforceSandboxTest.Plugin
         public async Task DiscoverSchemasAllTest()
         {
             // setup
-            var mockHttp = GetMockHttpMessageHandler();
-
             Server server = new Server
             {
-                Services = {Publisher.BindService(new PluginSalesforceSandbox.Plugin.Plugin(mockHttp.ToHttpClient()))},
+                Services = {Publisher.BindService(new PluginSalesforceSandbox.Plugin.Plugin())},
                 Ports = {new ServerPort("localhost", 0, ServerCredentials.Insecure)}
             };
             server.Start();
@@ -280,11 +156,9 @@ namespace PluginSalesforceSandboxTest.Plugin
         public async Task DiscoverSchemasRefreshTest()
         {
             // setup
-            var mockHttp = GetMockHttpMessageHandler();
-
             Server server = new Server
             {
-                Services = {Publisher.BindService(new PluginSalesforceSandbox.Plugin.Plugin(mockHttp.ToHttpClient()))},
+                Services = {Publisher.BindService(new PluginSalesforceSandbox.Plugin.Plugin())},
                 Ports = {new ServerPort("localhost", 0, ServerCredentials.Insecure)}
             };
             server.Start();
@@ -319,11 +193,9 @@ namespace PluginSalesforceSandboxTest.Plugin
         public async Task ReadStreamTest()
         {
             // setup
-            var mockHttp = GetMockHttpMessageHandler();
-
             Server server = new Server
             {
-                Services = {Publisher.BindService(new PluginSalesforceSandbox.Plugin.Plugin(mockHttp.ToHttpClient()))},
+                Services = {Publisher.BindService(new PluginSalesforceSandbox.Plugin.Plugin())},
                 Ports = {new ServerPort("localhost", 0, ServerCredentials.Insecure)}
             };
             server.Start();
@@ -339,7 +211,7 @@ namespace PluginSalesforceSandboxTest.Plugin
             {
                 Schema = new Schema
                 {
-                    Id = "Account",
+                    Id = "Policy__c",
                     Properties =
                     {
                         new Property
@@ -387,7 +259,7 @@ namespace PluginSalesforceSandboxTest.Plugin
             }
 
             // assert
-            Assert.Equal(12, records.Count);
+            Assert.Equal(14538, records.Count);
 
             // cleanup
             await channel.ShutdownAsync();
@@ -398,11 +270,9 @@ namespace PluginSalesforceSandboxTest.Plugin
         public async Task ReadStreamLimitTest()
         {
             // setup
-            var mockHttp = GetMockHttpMessageHandler();
-
             Server server = new Server
             {
-                Services = {Publisher.BindService(new PluginSalesforceSandbox.Plugin.Plugin(mockHttp.ToHttpClient()))},
+                Services = {Publisher.BindService(new PluginSalesforceSandbox.Plugin.Plugin())},
                 Ports = {new ServerPort("localhost", 0, ServerCredentials.Insecure)}
             };
             server.Start();
@@ -466,11 +336,9 @@ namespace PluginSalesforceSandboxTest.Plugin
         public async Task PrepareWriteTest()
         {
             // setup
-            var mockHttp = GetMockHttpMessageHandler();
-
             Server server = new Server
             {
-                Services = {Publisher.BindService(new PluginSalesforceSandbox.Plugin.Plugin(mockHttp.ToHttpClient()))},
+                Services = {Publisher.BindService(new PluginSalesforceSandbox.Plugin.Plugin())},
                 Ports = {new ServerPort("localhost", 0, ServerCredentials.Insecure)}
             };
             server.Start();
@@ -527,11 +395,9 @@ namespace PluginSalesforceSandboxTest.Plugin
         public async Task WriteStreamTest()
         {
             // setup
-            var mockHttp = GetMockHttpMessageHandler();
-
             Server server = new Server
             {
-                Services = {Publisher.BindService(new PluginSalesforceSandbox.Plugin.Plugin(mockHttp.ToHttpClient()))},
+                Services = {Publisher.BindService(new PluginSalesforceSandbox.Plugin.Plugin())},
                 Ports = {new ServerPort("localhost", 0, ServerCredentials.Insecure)}
             };
             server.Start();
@@ -631,11 +497,9 @@ namespace PluginSalesforceSandboxTest.Plugin
         public async Task DisconnectTest()
         {
             // setup
-            var mockHttp = GetMockHttpMessageHandler();
-
             Server server = new Server
             {
-                Services = {Publisher.BindService(new PluginSalesforceSandbox.Plugin.Plugin(mockHttp.ToHttpClient()))},
+                Services = {Publisher.BindService(new PluginSalesforceSandbox.Plugin.Plugin())},
                 Ports = {new ServerPort("localhost", 0, ServerCredentials.Insecure)}
             };
             server.Start();

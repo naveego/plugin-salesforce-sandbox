@@ -19,7 +19,7 @@ namespace PluginSalesforceSandboxTest.Helper
             mockHttp.When("https://test.salesforce.com/services/oauth2/token")
                 .Respond("application/json", "{\"access_token\":\"mocktoken\"}");
             
-            mockHttp.When("https://test.salesforce.com/services/data/v45.0/test")
+            mockHttp.When("https://test.salesforce.com/services/data/v52.0/test")
                 .Respond("application/json", "success");
 
             var requestHelper = new RequestHelper(new Settings{ ClientId = "client", ClientSecret = "secret", RefreshToken = "refresh", InstanceUrl = "https://test.salesforce.com"}, mockHttp.ToHttpClient());
@@ -40,7 +40,7 @@ namespace PluginSalesforceSandboxTest.Helper
             mockHttp.When("https://test.salesforce.com/services/oauth2/token")
                 .Respond(HttpStatusCode.Forbidden);
 
-            mockHttp.When("https://test.salesforce.com/services/data/v45.0/test")
+            mockHttp.When("https://test.salesforce.com/services/data/v52.0/test")
                 .Respond(HttpStatusCode.Unauthorized);
 
             var requestHelper = new RequestHelper(new Settings{ ClientId = "client", ClientSecret = "secret", RefreshToken = "refresh", InstanceUrl = "https://test.salesforce.com"}, mockHttp.ToHttpClient());
@@ -61,7 +61,7 @@ namespace PluginSalesforceSandboxTest.Helper
             mockHttp.When("https://test.salesforce.com/services/oauth2/token")
                 .Respond("application/json", "{\"access_token\":\"mocktoken\"}");
             
-            mockHttp.When("https://test.salesforce.com/services/data/v45.0/test")
+            mockHttp.When("https://test.salesforce.com/services/data/v52.0/test")
                 .Throw(new Exception("bad stuff"));
 
             var requestHelper = new RequestHelper(new Settings{ ClientId = "client", ClientSecret = "secret", RefreshToken = "refresh",  InstanceUrl = "https://test.salesforce.com"}, mockHttp.ToHttpClient());
