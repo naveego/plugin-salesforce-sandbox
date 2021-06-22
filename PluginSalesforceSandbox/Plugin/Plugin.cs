@@ -475,6 +475,8 @@ namespace PluginSalesforceSandbox.Plugin
                     records.Clear();
                 } while (previousDate != createdDate.GetValueOrDefault() && recordsResponse.TotalSize == 200 && _server.Connected);
 
+                _allRecordIds.Clear();
+                
                 Logger.Info($"Published {recordsCount} records");
             }
             catch (Exception e)
@@ -483,7 +485,7 @@ namespace PluginSalesforceSandbox.Plugin
             }
         }
 
-        private List<string> AllRecordIds = new List<string>();
+        private readonly List<string> _allRecordIds = new List<string>();
         
         private async Task<int> PublishRecords(Schema schema, bool limitFlag, uint limit, List<Dictionary<string, object>> records, int recordsCount, IServerStreamWriter<Record> responseStream)
         {
@@ -525,9 +527,9 @@ namespace PluginSalesforceSandbox.Plugin
                 }
 
                 // publish record
-                if (!AllRecordIds.Contains(record["Id"]))
+                if (!_allRecordIds.Contains(record["Id"]))
                 {
-                    AllRecordIds.Add(record["Id"]?.ToString());
+                    _allRecordIds.Add(record["Id"]?.ToString());
                     await responseStream.WriteAsync(recordOutput);
                     recordsCount++;
                 }
