@@ -16,6 +16,8 @@ using Naveego.Sdk.Logging;
 using Naveego.Sdk.Plugins;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+using PluginSalesforce.API.Discover;
+using PluginSalesforce.API.Read;
 using PluginSalesforce.DataContracts;
 using PluginSalesforce.Helper;
 
@@ -177,7 +179,7 @@ namespace PluginSalesforce.Plugin
 
             return oAuthResponse;
         }
-        
+
         /// <summary>
         /// Configures the plugin
         /// </summary>
@@ -193,7 +195,7 @@ namespace PluginSalesforce.Plugin
             Directory.CreateDirectory(request.TemporaryDirectory);
             Directory.CreateDirectory(request.PermanentDirectory);
             Directory.CreateDirectory(request.LogDirectory);
-            
+
 
             // configure logger
             Logger.SetLogLevel(request.LogLevel);
@@ -359,8 +361,24 @@ namespace PluginSalesforce.Plugin
             Logger.Info("Discovering Schemas...");
 
             DiscoverSchemasResponse discoverSchemasResponse = new DiscoverSchemasResponse();
-            List<TabObject> tabsResponse;
 
+            // handle query based schema
+            try
+            {
+                if (request.Mode == DiscoverSchemasRequest.Types.Mode.Refresh && request.ToRefresh.Count == 1 &&
+                    !string.IsNullOrWhiteSpace(request.ToRefresh.First().Query))
+                {
+                    discoverSchemasResponse.Schemas.Add(await Discover.GetSchemaForQuery(_injectedClient, request.ToRefresh.First()));
+                    return discoverSchemasResponse;
+                }
+            }
+            catch (Exception e)
+            {
+                Logger.Error(e, e.Message, context);
+                return new DiscoverSchemasResponse();
+            }
+
+            List<TabObject> tabsResponse;
             // get the tabs present in Salesforce
             try
             {
@@ -382,7 +400,8 @@ namespace PluginSalesforce.Plugin
             {
                 Logger.Info($"Schemas attempted: {tabsResponse.Count}");
 
-                var tasks = tabsResponse.Select(GetSchemaForTab)
+                var tasks = tabsResponse
+                    .Select(t => Discover.GetSchemaForTab(_injectedClient, _fieldObjectsDictionary, t))
                     .ToArray();
 
                 await Task.WhenAll(tasks);
@@ -434,7 +453,7 @@ namespace PluginSalesforce.Plugin
             var schema = request.Schema;
             var limit = request.Limit;
             var limitFlag = request.Limit != 0;
-            
+
             Logger.SetLogPrefix(request.JobId);
             Logger.Info($"Publishing records for schema: {schema.Name}");
 
@@ -443,41 +462,66 @@ namespace PluginSalesforce.Plugin
                 var recordsCount = 0;
                 var records = new List<Dictionary<string, object>>();
 
-                // get all records
-                // build query string
-                var query = $@"select fields(all) from {schema.Id} order by CreatedDate asc nulls last limit 200";
-
-                // get records for schema page by page
-                RecordsResponse recordsResponse;
-                DateTime previousDate;
-                DateTime? createdDate = DateTime.Now;
-                do
+                if (!string.IsNullOrWhiteSpace(schema.Query))
                 {
-                    previousDate = createdDate.GetValueOrDefault();
-                    
-                    // get records
-                    var response = await _client.GetAsync($"/query?q={HttpUtility.UrlEncode(query)}");
-                    response.EnsureSuccessStatusCode();
+                    await foreach (var record in Read.GetRecordsForQuery(_injectedClient, schema))
+                    {
+                        records.Add(record);
 
-                    recordsResponse =
-                        JsonConvert.DeserializeObject<RecordsResponse>(await response.Content.ReadAsStringAsync());
-
-                    records.AddRange(recordsResponse.Records);
-                
-                    // Publish records for the given schema
-                    recordsCount = await PublishRecords(schema, limitFlag, limit, records, recordsCount, responseStream);
+                        if (records.Count % 100 == 0)
+                        {
+                            recordsCount =
+                                await PublishRecords(schema, limitFlag, limit, records, recordsCount, responseStream, true);
+                        }
+                        records.Clear();
+                    }
                     
-                    // update query
-                    createdDate = (DateTime?) records.LastOrDefault()?["CreatedDate"];
-                    query = $@"select fields(all) from {schema.Id} where CreatedDate >= {(createdDate.HasValue ? createdDate.Value.ToUniversalTime().ToString("O") : "")} order by CreatedDate asc nulls last limit 200";
+                    recordsCount =
+                        await PublishRecords(schema, limitFlag, limit, records, recordsCount, responseStream, true);
                     
-                    // clear records
-                    records.Clear();
-                } while (previousDate != createdDate.GetValueOrDefault() && recordsResponse.TotalSize == 200 && _server.Connected);
+                    Logger.Info($"Published {recordsCount} records");
+                }
+                else
+                {
+                    // get all records
+                    // build query string
+                    var query = $@"select fields(all) from {schema.Id} order by CreatedDate asc nulls last limit 200";
 
-                _allRecordIds.Clear();
-                
-                Logger.Info($"Published {recordsCount} records");
+                    // get records for schema page by page
+                    RecordsResponse recordsResponse;
+                    DateTime previousDate;
+                    DateTime? createdDate = DateTime.Now;
+                    do
+                    {
+                        previousDate = createdDate.GetValueOrDefault();
+
+                        // get records
+                        var response = await _client.GetAsync($"/query?q={HttpUtility.UrlEncode(query)}");
+                        response.EnsureSuccessStatusCode();
+
+                        recordsResponse =
+                            JsonConvert.DeserializeObject<RecordsResponse>(await response.Content.ReadAsStringAsync());
+
+                        records.AddRange(recordsResponse.Records);
+
+                        // Publish records for the given schema
+                        recordsCount =
+                            await PublishRecords(schema, limitFlag, limit, records, recordsCount, responseStream);
+
+                        // update query
+                        createdDate = (DateTime?) records.LastOrDefault()?["CreatedDate"];
+                        query =
+                            $@"select fields(all) from {schema.Id} where CreatedDate >= {(createdDate.HasValue ? createdDate.Value.ToUniversalTime().ToString("O") : "")} order by CreatedDate asc nulls last limit 200";
+
+                        // clear records
+                        records.Clear();
+                    } while (previousDate != createdDate.GetValueOrDefault() && recordsResponse.TotalSize == 200 &&
+                             _server.Connected);
+
+                    _allRecordIds.Clear();
+
+                    Logger.Info($"Published {recordsCount} records");
+                }
             }
             catch (Exception e)
             {
@@ -486,8 +530,9 @@ namespace PluginSalesforce.Plugin
         }
 
         private readonly List<string> _allRecordIds = new List<string>();
-        
-        private async Task<int> PublishRecords(Schema schema, bool limitFlag, uint limit, List<Dictionary<string, object>> records, int recordsCount, IServerStreamWriter<Record> responseStream)
+
+        private async Task<int> PublishRecords(Schema schema, bool limitFlag, uint limit,
+            List<Dictionary<string, object>> records, int recordsCount, IServerStreamWriter<Record> responseStream, bool forQuery = false)
         {
             // Publish records for the given schema
             foreach (var record in records)
@@ -527,11 +572,19 @@ namespace PluginSalesforce.Plugin
                 }
 
                 // publish record
-                if (!_allRecordIds.Contains(record["Id"]))
+                if (forQuery)
                 {
-                    _allRecordIds.Add(record["Id"]?.ToString());
                     await responseStream.WriteAsync(recordOutput);
                     recordsCount++;
+                }
+                else
+                {
+                    if (!_allRecordIds.Contains(record["Id"]))
+                    {
+                        _allRecordIds.Add(record["Id"]?.ToString());
+                        await responseStream.WriteAsync(recordOutput);
+                        recordsCount++;
+                    }
                 }
             }
 
@@ -544,7 +597,8 @@ namespace PluginSalesforce.Plugin
         /// <param name="request"></param>
         /// <param name="context"></param>
         /// <returns></returns>
-        public override async Task<PrepareWriteResponse> PrepareWrite(PrepareWriteRequest request, ServerCallContext context)
+        public override async Task<PrepareWriteResponse> PrepareWrite(PrepareWriteRequest request,
+            ServerCallContext context)
         {
             Logger.SetLogPrefix(request.DataVersions.JobId);
             Logger.Info("Preparing write...");
@@ -555,7 +609,7 @@ namespace PluginSalesforce.Plugin
                 CommitSLA = request.CommitSlaSeconds,
                 Schema = request.Schema
             };
-            
+
             // get fields for module
             var response = await _client.GetAsync(String.Format("/sobjects/{0}/describe", request.Schema.Id));
 
@@ -668,110 +722,6 @@ namespace PluginSalesforce.Plugin
 
             Logger.Info("Disconnected");
             return Task.FromResult(new DisconnectResponse());
-        }
-
-        /// <summary>
-        /// Gets a schema for a given endpoint
-        /// </summary>
-        /// <param name="tab"></param>
-        /// <returns>returns a schema or null if unavailable</returns>
-        private async Task<Schema> GetSchemaForTab(TabObject tab)
-        {
-            // base schema to be added to
-            var schema = new Schema
-            {
-                Id = tab.SobjectName,
-                Name = tab.Label,
-                Description = tab.Name,
-                PublisherMetaJson = JsonConvert.SerializeObject(new PublisherMetaJson
-                {
-                }),
-                DataFlowDirection = Schema.Types.DataFlowDirection.ReadWrite
-            };
-
-            try
-            {
-                Logger.Debug($"Getting fields for: {tab.Label}");
-
-                // get fields for module
-                var response = await _client.GetAsync(String.Format("/sobjects/{0}/describe", tab.SobjectName));
-
-                // if response is not found return null
-                if (response.StatusCode == HttpStatusCode.NotFound)
-                {
-                    Logger.Debug($"No fields for: {tab.SobjectName}");
-                    return null;
-                }
-
-                Logger.Debug($"Got fields for: {tab.SobjectName}");
-
-                // for each field in the schema add a new property
-                var describeResponse =
-                    JsonConvert.DeserializeObject<DescribeResponse>(await response.Content.ReadAsStringAsync());
-
-                _fieldObjectsDictionary.TryAdd(schema.Id, describeResponse.Fields);
-
-                foreach (var field in describeResponse.Fields)
-                {
-                    var property = new Property
-                    {
-                        Id = field.Name,
-                        Name = field.Label,
-                        Type = GetPropertyType(field),
-                        IsKey = field.IdLookup,
-                        IsCreateCounter = field.Name == "CreatedDate",
-                        IsUpdateCounter = field.Name == "LastModifiedDate",
-                        TypeAtSource = field.Type,
-                        IsNullable = field.Nillable
-                    };
-
-                    schema.Properties.Add(property);
-                }
-
-                Logger.Debug($"Added schema for: {tab.SobjectName}");
-                return schema;
-            }
-            catch (Exception e)
-            {
-                Logger.Error(e, e.Message);
-                return null;
-            }
-        }
-
-        /// <summary>
-        /// Gets the Naveego type from the provided Salesforce information
-        /// </summary>
-        /// <param name="field"></param>
-        /// <returns>The property type</returns>
-        private PropertyType GetPropertyType(FieldObject field)
-        {
-            switch (field.SoapType)
-            {
-                case "xsd:boolean":
-                    return PropertyType.Bool;
-                case "xsd:int":
-                    return PropertyType.Integer;
-                case "xsd:double":
-                    return PropertyType.Float;
-                case "xsd:date":
-                    return PropertyType.Date;
-                case "xsd:dateTime":
-                    return PropertyType.Datetime;
-                case "xsd:string":
-                    if (field.Length >= 1024)
-                    {
-                        return PropertyType.Text;
-                    }
-
-                    return PropertyType.String;
-                default:
-                    if (field.SoapType.Contains("urn"))
-                    {
-                        return PropertyType.Json;
-                    }
-
-                    return PropertyType.String;
-            }
         }
 
         /// <summary>
@@ -916,7 +866,7 @@ namespace PluginSalesforce.Plugin
             try
             {
                 var patchObj = new Dictionary<string, object>();
-            
+
                 if (_fieldObjectsDictionary.TryGetValue(schema.Id, out List<FieldObject> fields))
                 {
                     foreach (var property in schema.Properties)
@@ -942,7 +892,7 @@ namespace PluginSalesforce.Plugin
                             }
                         }
                     }
-                    
+
                     return patchObj;
                 }
                 else

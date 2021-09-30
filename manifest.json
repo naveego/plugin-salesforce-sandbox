@@ -12,10 +12,21 @@
   "arch": "$GOARCH",
   "accessGroups": [],
   "canProduceMultipleSchemas": true,
-  "canAcceptQueryBasedSchemas": false,
+  "canAcceptQueryBasedSchemas": true,
   "canConfigure": true,
   "canUseOAuth": true,
   "canWrite": true,
+  "querySchema": {
+    "ui": {
+      "ui:widget": "code",
+      "ui:options": {
+        "language": "sql"
+      }
+    },
+    "schema": {
+      "type": "string"
+    }
+  },
   "configSchema": {
     "ui": {},
     "schema": {}
