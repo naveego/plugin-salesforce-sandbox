@@ -8,8 +8,8 @@ namespace PluginSalesforce.DataContracts
         [JsonProperty("done")]
         public bool Done { get; set; }
         
-        [JsonProperty("nextRecordsUrl")]
-        public string NextRecordsUrl { get; set; }
+        // [JsonProperty("nextRecordsUrl")]
+        // public string NextRecordsUrl { get; set; }
         
         [JsonProperty("records")]
         public List<Dictionary<string,object>> Records { get; set; }

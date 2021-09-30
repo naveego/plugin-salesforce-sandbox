@@ -445,45 +445,37 @@ namespace PluginSalesforce.Plugin
 
                 // get all records
                 // build query string
-                StringBuilder query = new StringBuilder("select+");
-
-                foreach (var property in schema.Properties)
-                {
-                    query.Append($"{property.Id},");
-                }
-
-                // remove trailing comma
-                query.Length--;
-
-                query.Append($"+from+{schema.Id}");
+                var query = $@"select fields(all) from {schema.Id} order by CreatedDate asc nulls last limit 200";
 
                 // get records for schema page by page
-                var response = await _client.GetAsync(String.Format("/query?q={0}", query));
-                response.EnsureSuccessStatusCode();
-
-                var recordsResponse =
-                    JsonConvert.DeserializeObject<RecordsResponse>(await response.Content.ReadAsStringAsync());
-
-                records.AddRange(recordsResponse.Records);
-                
-                // Publish records for the given schema
-                recordsCount = await PublishRecords(schema, limitFlag, limit, records, recordsCount, responseStream);
-                records.Clear();
-
-                while (!recordsResponse.Done && _server.Connected)
+                RecordsResponse recordsResponse;
+                DateTime previousDate;
+                DateTime? createdDate = DateTime.Now;
+                do
                 {
-                    response = await _client.GetAsync(recordsResponse.NextRecordsUrl.Replace("/services/data/v45.0", ""));
+                    previousDate = createdDate.GetValueOrDefault();
+                    
+                    // get records
+                    var response = await _client.GetAsync($"/query?q={HttpUtility.UrlEncode(query)}");
                     response.EnsureSuccessStatusCode();
 
                     recordsResponse =
                         JsonConvert.DeserializeObject<RecordsResponse>(await response.Content.ReadAsStringAsync());
 
                     records.AddRange(recordsResponse.Records);
-                    
+                
                     // Publish records for the given schema
                     recordsCount = await PublishRecords(schema, limitFlag, limit, records, recordsCount, responseStream);
+                    
+                    // update query
+                    createdDate = (DateTime?) records.LastOrDefault()?["CreatedDate"];
+                    query = $@"select fields(all) from {schema.Id} where CreatedDate >= {(createdDate.HasValue ? createdDate.Value.ToUniversalTime().ToString("O") : "")} order by CreatedDate asc nulls last limit 200";
+                    
+                    // clear records
                     records.Clear();
-                }
+                } while (previousDate != createdDate.GetValueOrDefault() && recordsResponse.TotalSize == 200 && _server.Connected);
+
+                _allRecordIds.Clear();
                 
                 Logger.Info($"Published {recordsCount} records");
             }
@@ -493,6 +485,8 @@ namespace PluginSalesforce.Plugin
             }
         }
 
+        private readonly List<string> _allRecordIds = new List<string>();
+        
         private async Task<int> PublishRecords(Schema schema, bool limitFlag, uint limit, List<Dictionary<string, object>> records, int recordsCount, IServerStreamWriter<Record> responseStream)
         {
             // Publish records for the given schema
@@ -533,8 +527,12 @@ namespace PluginSalesforce.Plugin
                 }
 
                 // publish record
-                await responseStream.WriteAsync(recordOutput);
-                recordsCount++;
+                if (!_allRecordIds.Contains(record["Id"]))
+                {
+                    _allRecordIds.Add(record["Id"]?.ToString());
+                    await responseStream.WriteAsync(recordOutput);
+                    recordsCount++;
+                }
             }
 
             return recordsCount;

@@ -18,7 +18,7 @@ namespace PluginSalesforce.Helper
             _authenticator = new Authenticator(settings, client);
             _client = client;
             _settings = settings;
-            _baseUrl = String.Format("{0}/services/data/v45.0", settings.InstanceUrl);
+            _baseUrl = String.Format("{0}/services/data/v52.0", settings.InstanceUrl);
         }
 
         /// <summary>
