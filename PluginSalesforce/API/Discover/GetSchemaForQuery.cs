@@ -8,12 +8,13 @@ using Naveego.Sdk.Logging;
 using Naveego.Sdk.Plugins;
 using Newtonsoft.Json;
 using PluginSalesforce.DataContracts;
+using PluginSalesforce.Helper;
 
 namespace PluginSalesforce.API.Discover
 {
     public static partial class Discover
     {
-        public static async Task<Schema> GetSchemaForQuery(HttpClient client, Schema schema)
+        public static async Task<Schema> GetSchemaForQuery(RequestHelper client, Schema schema)
         {
             var query = schema.Query;
             

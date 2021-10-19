@@ -4,12 +4,13 @@ using System.Web;
 using Naveego.Sdk.Plugins;
 using Newtonsoft.Json;
 using PluginSalesforce.DataContracts;
+using PluginSalesforce.Helper;
 
 namespace PluginSalesforce.API.Read
 {
     public static partial class Read
     {
-        public static async IAsyncEnumerable<Dictionary<string, object>> GetRecordsForQuery(HttpClient client, Schema schema)
+        public static async IAsyncEnumerable<Dictionary<string, object>> GetRecordsForQuery(RequestHelper client, Schema schema)
         {
             var query = schema.Query;
             

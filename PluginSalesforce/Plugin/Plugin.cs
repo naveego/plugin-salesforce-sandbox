@@ -368,7 +368,7 @@ namespace PluginSalesforce.Plugin
                 if (request.Mode == DiscoverSchemasRequest.Types.Mode.Refresh && request.ToRefresh.Count == 1 &&
                     !string.IsNullOrWhiteSpace(request.ToRefresh.First().Query))
                 {
-                    discoverSchemasResponse.Schemas.Add(await Discover.GetSchemaForQuery(_injectedClient, request.ToRefresh.First()));
+                    discoverSchemasResponse.Schemas.Add(await Discover.GetSchemaForQuery(_client, request.ToRefresh.First()));
                     return discoverSchemasResponse;
                 }
             }
@@ -464,7 +464,7 @@ namespace PluginSalesforce.Plugin
 
                 if (!string.IsNullOrWhiteSpace(schema.Query))
                 {
-                    await foreach (var record in Read.GetRecordsForQuery(_injectedClient, schema))
+                    await foreach (var record in Read.GetRecordsForQuery(_client, schema))
                     {
                         records.Add(record);
 
@@ -472,8 +472,8 @@ namespace PluginSalesforce.Plugin
                         {
                             recordsCount =
                                 await PublishRecords(schema, limitFlag, limit, records, recordsCount, responseStream, true);
+                            records.Clear();
                         }
-                        records.Clear();
                     }
                     
                     recordsCount =
