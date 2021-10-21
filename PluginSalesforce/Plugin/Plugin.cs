@@ -368,7 +368,7 @@ namespace PluginSalesforce.Plugin
                 if (request.Mode == DiscoverSchemasRequest.Types.Mode.Refresh && request.ToRefresh.Count == 1 &&
                     !string.IsNullOrWhiteSpace(request.ToRefresh.First().Query))
                 {
-                    discoverSchemasResponse.Schemas.Add(await Discover.GetSchemaForQuery(_client, request.ToRefresh.First()));
+                    discoverSchemasResponse.Schemas.Add(await Discover.GetSchemaForQuery(_client, request.ToRefresh.First(), request.SampleSize));
                     return discoverSchemasResponse;
                 }
             }

@@ -14,7 +14,7 @@ namespace PluginSalesforce.API.Discover
 {
     public static partial class Discover
     {
-        public static async Task<Schema> GetSchemaForQuery(RequestHelper client, Schema schema)
+        public static async Task<Schema> GetSchemaForQuery(RequestHelper client, Schema schema, uint sampleSize = 5)
         {
             var query = schema.Query;
             
@@ -64,6 +64,41 @@ namespace PluginSalesforce.API.Discover
                 Logger.Error(e, e.Message);
                 return schema;
             }
+
+            var sampleRecords = new List<Record>();
+            foreach (var record in records.Take(Convert.ToInt32(sampleSize)))
+            {
+                try
+                {
+                    record.Remove("attributes");
+
+                    foreach (var property in schema.Properties)
+                    {
+                        if (property.Type == PropertyType.String)
+                        {
+                            var value = record[property.Id];
+                            if (!(value is string))
+                            {
+                                record[property.Id] = JsonConvert.SerializeObject(value);
+                            }
+                        }
+                    }
+                }
+                catch (Exception e)
+                {
+                    Logger.Error(e, e.Message);
+                    continue;
+                }
+
+                var recordOutput = new Record
+                {
+                    Action = Record.Types.Action.Upsert,
+                    DataJson = JsonConvert.SerializeObject(record)
+                };
+                sampleRecords.Add(recordOutput);
+            }
+            
+            schema.Sample.AddRange(sampleRecords);
 
             return schema;
         }
