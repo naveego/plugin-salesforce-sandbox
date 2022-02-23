@@ -35,6 +35,8 @@ namespace PluginSalesforceSandbox.API.Read
                 
                 recordsResponse =
                     JsonConvert.DeserializeObject<RecordsResponse>(await response.Content.ReadAsStringAsync());
+
+                records = recordsResponse.Records;
                 
                 foreach (var record in records)
                 {
