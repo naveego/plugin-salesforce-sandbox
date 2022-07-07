@@ -12,68 +12,24 @@ namespace PluginSalesforce.API.Read
                 {"type", "object"},
                 {"properties", new Dictionary<string, object>
                 {
-                    {"PollingInterval", new Dictionary<string, object>
+                    {"BatchWindow", new Dictionary<string, object>
                     {
                         {"type", "number"},
-                        {"title", "Polling Interval"},
-                        {"description", "How frequently to poll the api for changes in seconds (default 5s)."},
+                        {"title", "Batch Window"},
+                        {"description", "Length of interval to wait between processing real time jobs in seconds (default 5s)."},
                         {"default", 5},
                     }},
-                    {"TableInformation", new Dictionary<string, object>
+                    {"ChannelName", new Dictionary<string, object>
                     {
-                        {"type", "array"},
-                        {"title", "Table Information"},
-                        {"description", "Information about the tables to monitor for changes."},
-                        {"items", new Dictionary<string, object>
-                        {
-                            {"type", "object"},
-                            {"properties", new Dictionary<string, object>
-                            {
-                                {"TargetJournalLibrary", new Dictionary<string, string>
-                                {
-                                    {"type", "string"},
-                                    {"title", "Target Journal Library"},
-                                    {"description", "The name of the library the target journal file is in."},
-                                }},
-                                {"TargetJournalName", new Dictionary<string, string>
-                                {
-                                    {"type", "string"},
-                                    {"title", "Target Journal Name"},
-                                    {"description", "The name of the Journal file to query for changes."},
-                                }},
-                                {"TargetTableLibrary", new Dictionary<string, string>
-                                {
-                                    {"type", "string"},
-                                    {"title", "Target Table Library"},
-                                    {"description", "The name of the library the target table file is in."},
-                                }},
-                                {"TargetTableName", new Dictionary<string, string>
-                                {
-                                    {"type", "string"},
-                                    {"title", "Target Table Name"},
-                                    {"description", "The name of the table file being monitored for changes."},
-                                }},
-                                {"TargetTableAlias", new Dictionary<string, string>
-                                {
-                                    {"type", "string"},
-                                    {"title", "Target Table Alias"},
-                                    {"description", "The alias of the table file as defined in the query being monitored for changes."},
-                                }},
-                            }},
-                            {"required", new []
-                            {
-                                "TargetJournalLibrary",
-                                "TargetJournalName",
-                                "TargetTableLibrary",
-                                "TargetTableName"
-                            }}
-                        }}
-                    }},
+                        {"type", "string"},
+                        {"title", "Channel Name"},
+                        {"description", "Enter the name of the channel in Salesforce. To create or find an existing channel, please refer to this documentation: https://docs.naveego.com/docs/plugins/plugin-salesforce-realtime.html"}
+                    }}
                 }},
                 {"required", new []
                 {
-                    "PollingInterval",
-                    "TableInformation"
+                    "BatchWindow",
+                    "ChannelName"
                 }}
             };
             

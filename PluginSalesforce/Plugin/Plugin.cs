@@ -17,6 +17,7 @@ using Naveego.Sdk.Plugins;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using PluginSalesforce.API.Discover;
+using PluginSalesforce.API.Factory;
 using PluginSalesforce.API.Read;
 using PluginSalesforce.API.Utility;
 using PluginSalesforce.DataContracts;
@@ -32,10 +33,12 @@ namespace PluginSalesforce.Plugin
         private readonly ServerStatus _server;
         private TaskCompletionSource<bool> _tcs;
         private ConcurrentDictionary<string, List<FieldObject>> _fieldObjectsDictionary;
+        private IPushTopicConnectionFactory _pushTopicConnectionFactory;
 
-        public Plugin(HttpClient client = null)
+        public Plugin(HttpClient client = null, IPushTopicConnectionFactory pushTopicConnectionFactory = null)
         {
             _injectedClient = client ?? new HttpClient();
+            _pushTopicConnectionFactory = pushTopicConnectionFactory ?? new PushTopicConnectionFactory();
             _server = new ServerStatus
             {
                 Connected = false,
@@ -241,13 +244,28 @@ namespace PluginSalesforce.Plugin
                 };
             }
 
-            var settings = new Settings
+            var settings = new Settings();
+            if (!string.IsNullOrEmpty(oAuthState.RefreshToken))
             {
-                ClientId = request.OauthConfiguration.ClientId,
-                ClientSecret = request.OauthConfiguration.ClientSecret,
-                RefreshToken = oAuthState.RefreshToken,
-                InstanceUrl = oAuthConfig.InstanceUrl
-            };
+                settings = new Settings
+                {
+                    ClientId = request.OauthConfiguration.ClientId,
+                    ClientSecret = request.OauthConfiguration.ClientSecret,
+                    RefreshToken = oAuthState.RefreshToken,
+                    InstanceUrl = oAuthConfig.InstanceUrl
+                };
+            }
+            else
+            {
+                var _settings = JsonConvert.DeserializeObject<Settings>(request.SettingsJson);
+                
+                settings = new Settings
+                {
+                    ClientId = _settings.ClientId,
+                    ClientSecret = _settings.ClientSecret,
+                    InstanceUrl = _settings.InstanceUrl
+                };
+            }
 
             // validate settings passed in
             try
@@ -362,7 +380,7 @@ namespace PluginSalesforce.Plugin
             Logger.Info("Discovering Schemas...");
 
             DiscoverSchemasResponse discoverSchemasResponse = new DiscoverSchemasResponse();
-
+            
             // handle query based schema
             try
             {
@@ -403,7 +421,7 @@ namespace PluginSalesforce.Plugin
                 Logger.Info($"Schemas attempted: {tabsResponse.Count}");
 
                 var tasks = tabsResponse
-                    .Select(t => Discover.GetSchemaForTab(_injectedClient, _fieldObjectsDictionary, t))
+                    .Select(t => Discover.GetSchemaForTab(_client, _fieldObjectsDictionary, t))
                     .ToArray();
 
                 await Task.WhenAll(tasks);
@@ -456,7 +474,23 @@ namespace PluginSalesforce.Plugin
             var schemaJson = Read.GetSchemaJson();
             var uiJson = Read.GetUIJson();
 
-
+            // if subquery exists then throw unsupported feature error
+            if (Regex.IsMatch(request.Schema.Query, @"\( *[Ss][Ee][Ll][Ee][Cc][Tt]"))
+            {
+                return Task.FromResult(new ConfigureRealTimeResponse
+                {
+                    Form = new ConfigurationFormResponse
+                    {
+                        DataJson = request.Form.DataJson,
+                        DataErrorsJson = "",
+                        Errors = { "Queries with joins are not supported for real time reads at this time." },
+                        SchemaJson = schemaJson,
+                        UiJson = uiJson,
+                        StateJson = request.Form.StateJson,
+                    }
+                });
+            }
+            
             // if first call 
             if (string.IsNullOrWhiteSpace(request.Form.DataJson) || request.Form.DataJson == "{}")
             {
@@ -512,7 +546,7 @@ namespace PluginSalesforce.Plugin
                 if (!string.IsNullOrWhiteSpace(request.RealTimeSettingsJson))
                 {
                     recordsCount = await Read.ReadRecordsRealTimeAsync(_client, request, responseStream,
-                        context, _server.Config.PermanentDirectory);
+                        context, _server.Config.PermanentDirectory, _pushTopicConnectionFactory);
                 }
                 else
                 {
@@ -520,7 +554,7 @@ namespace PluginSalesforce.Plugin
 
                     if (!string.IsNullOrWhiteSpace(schema.Query))
                     {
-                        await foreach (var record in Read.GetRecordsForQuery(_client, schema))
+                        await foreach (var record in Read.GetRecordsForQuery(_client, schema, schema.Query))
                         {
                             records.Add(record);
 
@@ -576,9 +610,8 @@ namespace PluginSalesforce.Plugin
 
                         _allRecordIds.Clear();
                     }
-                    
-                    Logger.Info($"Published {recordsCount} records");
                 }
+                Logger.Info($"Published {recordsCount} records");
             }
             catch (Exception e)
             {

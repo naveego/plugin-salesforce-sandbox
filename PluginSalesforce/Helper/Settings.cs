@@ -25,11 +25,6 @@ namespace PluginSalesforce.Helper
                 throw new Exception("the ClientSecret property must be set");
             }
             
-            if (String.IsNullOrEmpty(RefreshToken))
-            {
-                throw new Exception("the RefreshToken property must be set");
-            }
-            
             if (String.IsNullOrEmpty(InstanceUrl))
             {
                 throw new Exception("the InstanceUrl property must be set");

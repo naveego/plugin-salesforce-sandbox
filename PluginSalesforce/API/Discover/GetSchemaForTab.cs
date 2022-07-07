@@ -8,6 +8,7 @@ using Naveego.Sdk.Logging;
 using Naveego.Sdk.Plugins;
 using Newtonsoft.Json;
 using PluginSalesforce.DataContracts;
+using PluginSalesforce.Helper;
 
 namespace PluginSalesforce.API.Discover
 {
@@ -20,7 +21,7 @@ namespace PluginSalesforce.API.Discover
         /// <param name="fieldObjectsDictionary"></param>
         /// <param name="tab"></param>
         /// <returns>returns a schema or null if unavailable</returns>
-        public static async Task<Schema> GetSchemaForTab(HttpClient client,
+        public static async Task<Schema> GetSchemaForTab(RequestHelper client,
             ConcurrentDictionary<string, List<FieldObject>> fieldObjectsDictionary, TabObject tab)
         {
             // base schema to be added to

@@ -12,23 +12,8 @@ namespace PluginSalesforce.API.Read
                 {
                     "ui:order", new[]
                     {
-                        "PollingInterval",
-                        "TableInformation"
-                    }
-                },
-                {
-                    "TableInformation", new Dictionary<string,object>
-                    {
-                        {
-                            "ui:order", new[]
-                            {
-                                "TargetJournalLibrary",
-                                "TargetJournalName",
-                                "TargetTableLibrary",
-                                "TargetTableName",
-                                "TargetTableAlias"
-                            }
-                        }
+                        "ChannelName",
+                        "BatchWindow"
                     }
                 }
             };
