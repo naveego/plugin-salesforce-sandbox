@@ -32,8 +32,8 @@ namespace PluginSalesforce.Plugin
         private readonly HttpClient _injectedClient;
         private readonly ServerStatus _server;
         private TaskCompletionSource<bool> _tcs;
-        private ConcurrentDictionary<string, List<FieldObject>> _fieldObjectsDictionary;
-        private IPushTopicConnectionFactory _pushTopicConnectionFactory;
+        private readonly ConcurrentDictionary<string, List<FieldObject>> _fieldObjectsDictionary;
+        private readonly IPushTopicConnectionFactory _pushTopicConnectionFactory;
 
         public Plugin(HttpClient client = null, IPushTopicConnectionFactory pushTopicConnectionFactory = null)
         {
@@ -66,7 +66,7 @@ namespace PluginSalesforce.Plugin
             var display = "popup";
 
             // build auth url
-            var authUrl = String.Format(
+            var authUrl = string.Format(
                 "https://login.salesforce.com/services/oauth2/authorize?client_id={0}&response_type={1}&redirect_uri={2}&prompt={3}&display={4}",
                 clientId,
                 responseType,
@@ -112,7 +112,7 @@ namespace PluginSalesforce.Plugin
             }
 
             // token url parameters
-            var redirectUrl = String.Format("{0}{1}{2}{3}", uri.Scheme, Uri.SchemeDelimiter, uri.Authority,
+            var redirectUrl = string.Format("{0}{1}{2}{3}", uri.Scheme, Uri.SchemeDelimiter, uri.Authority,
                 uri.AbsolutePath);
             var clientId = request.Configuration.ClientId;
             var clientSecret = request.Configuration.ClientSecret;
@@ -483,7 +483,7 @@ namespace PluginSalesforce.Plugin
                     {
                         DataJson = request.Form.DataJson,
                         DataErrorsJson = "",
-                        Errors = { "Queries with joins are not supported for real time reads at this time." },
+                        Errors = { "Schemas with relationship queries are not supported for real time reads at this time." },
                         SchemaJson = schemaJson,
                         UiJson = uiJson,
                         StateJson = request.Form.StateJson,
@@ -507,6 +507,8 @@ namespace PluginSalesforce.Plugin
                     }
                 });
             }
+            
+            // TODO: Enhancement - Validate if the passed in channel name is valid and covers all the properties of the schema
 
             return Task.FromResult(new ConfigureRealTimeResponse
             {

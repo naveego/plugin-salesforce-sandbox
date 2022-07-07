@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using CometD.NetCore.Client;
+using Naveego.Sdk.Logging;
 using Naveego.Sdk.Plugins;
 using PluginSalesforce.API.Utility;
 
@@ -8,34 +9,32 @@ namespace PluginSalesforce.API.Factory
 {
     public class PushTopicConnection
     {
-        private BayeuxClient BayeuxClient = null;
-        private Listener Listener = null;
-        private string Channel = "";
+        private readonly BayeuxClient _bayeuxClient = null;
+        private readonly Listener _listener = null;
+        private readonly string _channel = "";
 
-        private bool IsClearing = false;
-        
         public PushTopicConnection(BayeuxClient bayeuxClient, string channel)
         {
-            BayeuxClient = bayeuxClient;
-            Channel = channel;
-            Listener = new Listener();
+            _bayeuxClient = bayeuxClient;
+            _channel = channel;
+            _listener = new Listener();
         }
         public void Connect()
         {
-            BayeuxClient.Handshake();
-            BayeuxClient.WaitFor(1000, new[] { BayeuxClient.State.CONNECTED });
-            BayeuxClient.GetChannel(Channel).Subscribe(Listener);
-            Console.WriteLine("[INFO] Waiting event from salesforce for the push topic " + Channel.ToString());
+            _bayeuxClient.Handshake();
+            _bayeuxClient.WaitFor(1000, new[] { BayeuxClient.State.CONNECTED });
+            _bayeuxClient.GetChannel(_channel).Subscribe(_listener);
+            Logger.Info($"Waiting event from salesforce for the push topic {_channel}");
         }
         public void Disconnect()
         {
-            BayeuxClient.Disconnect();
-            BayeuxClient.WaitFor(1000, new[] { BayeuxClient.State.DISCONNECTED });
+            _bayeuxClient.Disconnect();
+            _bayeuxClient.WaitFor(1000, new[] { BayeuxClient.State.DISCONNECTED });
         }
 
         public async IAsyncEnumerable<string> GetCurrentMessages()
         {
-            var messages = Listener.GetMessages();
+            var messages = _listener.GetMessages();
             
             foreach (var message in messages)
             {
@@ -45,12 +44,12 @@ namespace PluginSalesforce.API.Factory
 
         public void ClearStoredMessages()
         {
-            Listener.ClearStoredMessages();
+            _listener.ClearStoredMessages();
         }
 
         public bool HasMessages()
         {
-            return Listener.GetMessages().Count > 0;
+            return _listener.GetMessages().Count > 0;
         }
     }
 }

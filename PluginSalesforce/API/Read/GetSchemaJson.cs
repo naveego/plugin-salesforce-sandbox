@@ -12,11 +12,11 @@ namespace PluginSalesforce.API.Read
                 {"type", "object"},
                 {"properties", new Dictionary<string, object>
                 {
-                    {"BatchWindow", new Dictionary<string, object>
+                    {"BatchWindowSeconds", new Dictionary<string, object>
                     {
                         {"type", "number"},
                         {"title", "Batch Window"},
-                        {"description", "Length of interval to wait between processing real time jobs in seconds (default 5s)."},
+                        {"description", "Length of interval to wait between processing change notification events in a batch (default 5s)."},
                         {"default", 5},
                     }},
                     {"ChannelName", new Dictionary<string, object>
@@ -28,7 +28,7 @@ namespace PluginSalesforce.API.Read
                 }},
                 {"required", new []
                 {
-                    "BatchWindow",
+                    "BatchWindowSeconds",
                     "ChannelName"
                 }}
             };

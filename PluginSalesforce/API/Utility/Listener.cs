@@ -2,28 +2,28 @@
 using CometD.NetCore.Bayeux.Client;
 using System;
 using System.Collections.Generic;
+using Naveego.Sdk.Logging;
 
 namespace PluginSalesforce.API.Utility
 {
     public class Listener : IMessageListener
     {
-
-        public List<string> messages = new List<string>();
+        private readonly List<string> _messages = new List<string>();
         public void OnMessage(IClientSessionChannel channel, IMessage message)
         {
             var convertedJson = message.Json;
-            messages.Add(convertedJson);
-            Console.WriteLine(convertedJson);
+            _messages.Add(convertedJson);
+            Logger.Debug($"Got message: {convertedJson}");
         }
 
         public void ClearStoredMessages()
         {
-            messages.Clear();
+            _messages.Clear();
         }
 
         public List<string> GetMessages()
         {
-            return messages;
+            return _messages;
         }
     }
 }
