@@ -14,10 +14,10 @@ namespace PluginSalesforce.API.Discover
 {
     public static partial class Discover
     {
-        public static async Task<Schema> GetSchemaForQuery(RequestHelper client, Schema schema, uint sampleSize = 5)
+        public static async Task<Schema> GetSchemaForQuery(RequestHelper client, Schema schema, uint sampleSize = 5, bool realTimeRead = false)
         {
             var query = schema.Query;
-            
+
             // get records
             var response = await client.GetAsync($"/query?q={HttpUtility.UrlEncode(query)}");
             response.EnsureSuccessStatusCode();
@@ -46,7 +46,7 @@ namespace PluginSalesforce.API.Discover
                         Name = key,
                         Description = "",
                         Type = PropertyType.String,
-                        IsKey = false,
+                        IsKey = key.ToLower() == "id",
                         IsNullable = true,
                         IsCreateCounter = false,
                         IsUpdateCounter = false,

@@ -3,6 +3,7 @@ using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Threading.Tasks;
 using Naveego.Sdk.Logging;
+using PluginSalesforce.API.Utility;
 
 namespace PluginSalesforce.Helper
 {
@@ -12,6 +13,7 @@ namespace PluginSalesforce.Helper
         private readonly HttpClient _client;
         private readonly Settings _settings;
         private readonly string _baseUrl;
+        private readonly string _instanceUrl;
         
         public RequestHelper(Settings settings, HttpClient client)
         {
@@ -19,6 +21,7 @@ namespace PluginSalesforce.Helper
             _client = client;
             _settings = settings;
             _baseUrl = String.Format("{0}/services/data/v52.0", settings.InstanceUrl);
+            _instanceUrl = settings.InstanceUrl;
         }
 
         /// <summary>
@@ -220,6 +223,16 @@ namespace PluginSalesforce.Helper
                 Logger.Error(e, e.Message);
                 throw;
             }
+        }
+
+        public string GetToken()
+        {
+            return  _authenticator.GetToken().Result;
+        }
+
+        public string GetInstanceUrl()
+        {
+            return _instanceUrl;
         }
     }
 }

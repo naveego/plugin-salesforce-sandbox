@@ -15,22 +15,22 @@ namespace PluginSalesforce.Helper
         /// <exception cref="Exception"></exception>
         public void Validate()
         {
-            if (String.IsNullOrEmpty(ClientId))
+            if (string.IsNullOrEmpty(ClientId))
             {
                 throw new Exception("the ClientId property must be set");
             }
             
-            if (String.IsNullOrEmpty(ClientSecret))
+            if (string.IsNullOrEmpty(ClientSecret))
             {
                 throw new Exception("the ClientSecret property must be set");
             }
             
-            if (String.IsNullOrEmpty(RefreshToken))
+            if (string.IsNullOrEmpty(RefreshToken))
             {
                 throw new Exception("the RefreshToken property must be set");
             }
             
-            if (String.IsNullOrEmpty(InstanceUrl))
+            if (string.IsNullOrEmpty(InstanceUrl))
             {
                 throw new Exception("the InstanceUrl property must be set");
             }
