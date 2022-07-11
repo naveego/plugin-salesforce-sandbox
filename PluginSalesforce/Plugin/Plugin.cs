@@ -471,6 +471,7 @@ namespace PluginSalesforce.Plugin
         {
             Logger.Info("Configuring real time...");
 
+            
             var schemaJson = Read.GetSchemaJson();
             var uiJson = Read.GetUIJson();
 

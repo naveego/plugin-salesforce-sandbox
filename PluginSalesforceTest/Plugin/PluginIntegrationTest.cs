@@ -352,7 +352,7 @@ namespace PluginSalesforceTest.Plugin
             };
 
             var realTimeSettings = new RealTimeSettings();
-            realTimeSettings.ChannelName = "LeadsAll";
+            realTimeSettings.ChannelName = "AccountQA";
             
             var request = new ReadRequest()
             {
@@ -365,7 +365,7 @@ namespace PluginSalesforceTest.Plugin
                 RealTimeStateJson = JsonConvert.SerializeObject(new RealTimeState()),
                 RealTimeSettingsJson = JsonConvert.SerializeObject(realTimeSettings),
             };
-
+            
             // act
             var records = new List<Record>();
             try

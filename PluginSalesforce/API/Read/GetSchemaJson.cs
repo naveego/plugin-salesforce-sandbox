@@ -1,4 +1,6 @@
 using System.Collections.Generic;
+using System.Text;
+using Naveego.Sdk.Plugins;
 using Newtonsoft.Json;
 
 namespace PluginSalesforce.API.Read

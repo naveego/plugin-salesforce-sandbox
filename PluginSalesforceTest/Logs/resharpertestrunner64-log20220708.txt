@@ -1,0 +1,44 @@
+2022-07-08 10:17:53.913 -04:00 [INF]  Connecting...
+2022-07-08 10:17:53.922 -04:00 [INF]  {
+  "SettingsJson": "",
+  "OauthConfiguration": {
+    "ClientId": "3MVG9KsVczVNcM8wDG96Etsffgyk_zXTso6RlH9vDh.FPOOIUpjg8hRK3EQCDyiJhgUjl1ueMBUp_mfkeGTVm",
+    "ClientSecret": "1660571529639371280",
+    "ConfigurationJson": "{}"
+  },
+  "OauthStateJson": "{\"AuthToken\":\"00D1U000000qdO6!AQgAQNcL422pvVNsWdKAb6MpssVbtaxXBgmycScdD0T4O6yivQmDfiQjioMAslbnWVOM2fIr3ICpwsJpYuIgrarOlKVJB810\",\"RefreshToken\":\"5Aep861j70kdjF1ZXMvoj9ejaVQmu0JtbWe5VBxKhFdIXOZ0aCYJDjTdw2WUnvnF8RSim5PXdys1pjq2qAlTBd6\",\"Config\":\"{\\\"InstanceUrl\\\":\\\"https://d1u000000qdo6uai-dev-ed.my.salesforce.com\\\"}\"}",
+  "DataVersions": null
+}
+2022-07-08 10:17:55.646 -04:00 [ERR]  Response status code does not indicate success: 400 (Bad Request).
+System.Net.Http.HttpRequestException: Response status code does not indicate success: 400 (Bad Request).
+   at System.Net.Http.HttpResponseMessage.EnsureSuccessStatusCode()
+   at PluginSalesforce.Helper.Authenticator.GetToken() in C:\Dev\SalesForce\plugin-salesforce-realtimeread branch\plugin-salesforce\PluginSalesforce\Helper\Authenticator.cs:line 56
+2022-07-08 10:17:55.864 -04:00 [ERR]  Response status code does not indicate success: 400 (Bad Request).
+System.Net.Http.HttpRequestException: Response status code does not indicate success: 400 (Bad Request).
+   at System.Net.Http.HttpResponseMessage.EnsureSuccessStatusCode()
+   at PluginSalesforce.Helper.Authenticator.GetToken() in C:\Dev\SalesForce\plugin-salesforce-realtimeread branch\plugin-salesforce\PluginSalesforce\Helper\Authenticator.cs:line 56
+   at PluginSalesforce.Helper.RequestHelper.GetAsync(String path) in C:\Dev\SalesForce\plugin-salesforce-realtimeread branch\plugin-salesforce\PluginSalesforce\Helper\RequestHelper.cs:line 39
+   at PluginSalesforce.Plugin.Plugin.Connect(ConnectRequest request, ServerCallContext context) in C:\Dev\SalesForce\plugin-salesforce-realtimeread branch\plugin-salesforce\PluginSalesforce\Plugin\Plugin.cs:line 308
+2022-07-08 10:17:56.074 -04:00 [ERR]  Response status code does not indicate success: 400 (Bad Request).
+System.Net.Http.HttpRequestException: Response status code does not indicate success: 400 (Bad Request).
+   at System.Net.Http.HttpResponseMessage.EnsureSuccessStatusCode()
+   at PluginSalesforce.Helper.Authenticator.GetToken() in C:\Dev\SalesForce\plugin-salesforce-realtimeread branch\plugin-salesforce\PluginSalesforce\Helper\Authenticator.cs:line 56
+   at PluginSalesforce.Helper.RequestHelper.GetAsync(String path) in C:\Dev\SalesForce\plugin-salesforce-realtimeread branch\plugin-salesforce\PluginSalesforce\Helper\RequestHelper.cs:line 39
+   at PluginSalesforce.Plugin.Plugin.Connect(ConnectRequest request, ServerCallContext context) in C:\Dev\SalesForce\plugin-salesforce-realtimeread branch\plugin-salesforce\PluginSalesforce\Plugin\Plugin.cs:line 308
+2022-07-08 10:17:56.120 -04:00 [INF] <discover> Discovering Schemas...
+2022-07-08 10:17:56.120 -04:00 [DBG] <discover> Getting tabs...
+2022-07-08 10:17:56.439 -04:00 [ERR] <discover> Response status code does not indicate success: 400 (Bad Request).
+System.Net.Http.HttpRequestException: Response status code does not indicate success: 400 (Bad Request).
+   at System.Net.Http.HttpResponseMessage.EnsureSuccessStatusCode()
+   at PluginSalesforce.Helper.Authenticator.GetToken() in C:\Dev\SalesForce\plugin-salesforce-realtimeread branch\plugin-salesforce\PluginSalesforce\Helper\Authenticator.cs:line 56
+2022-07-08 10:17:56.586 -04:00 [ERR] <discover> Response status code does not indicate success: 400 (Bad Request).
+System.Net.Http.HttpRequestException: Response status code does not indicate success: 400 (Bad Request).
+   at System.Net.Http.HttpResponseMessage.EnsureSuccessStatusCode()
+   at PluginSalesforce.Helper.Authenticator.GetToken() in C:\Dev\SalesForce\plugin-salesforce-realtimeread branch\plugin-salesforce\PluginSalesforce\Helper\Authenticator.cs:line 56
+   at PluginSalesforce.Helper.RequestHelper.GetAsync(String path) in C:\Dev\SalesForce\plugin-salesforce-realtimeread branch\plugin-salesforce\PluginSalesforce\Helper\RequestHelper.cs:line 39
+2022-07-08 10:17:56.730 -04:00 [ERR] <discover> Response status code does not indicate success: 400 (Bad Request).
+System.Net.Http.HttpRequestException: Response status code does not indicate success: 400 (Bad Request).
+   at System.Net.Http.HttpResponseMessage.EnsureSuccessStatusCode()
+   at PluginSalesforce.Helper.Authenticator.GetToken() in C:\Dev\SalesForce\plugin-salesforce-realtimeread branch\plugin-salesforce\PluginSalesforce\Helper\Authenticator.cs:line 56
+   at PluginSalesforce.Helper.RequestHelper.GetAsync(String path) in C:\Dev\SalesForce\plugin-salesforce-realtimeread branch\plugin-salesforce\PluginSalesforce\Helper\RequestHelper.cs:line 39
+   at PluginSalesforce.Plugin.Plugin.DiscoverSchemas(DiscoverSchemasRequest request, ServerCallContext context) in C:\Dev\SalesForce\plugin-salesforce-realtimeread branch\plugin-salesforce\PluginSalesforce\Plugin\Plugin.cs:line 406
