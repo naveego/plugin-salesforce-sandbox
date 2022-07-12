@@ -354,45 +354,19 @@ namespace PluginSalesforce.API.Read
             RealTimeState realTimeState, List<string> schemaKeys, long recordsCount,
             ILiteCollection<RealTimeRecord> realtimeRecordsCollection, IServerStreamWriter<Record> responseStream)
         {
-            List<Dictionary<string, object>> allRecords = new List<Dictionary<string, object>>();
+            IAsyncEnumerable<Dictionary<string, object>> allRecords;
             
+            // get all records
             if (string.IsNullOrWhiteSpace(query))
             {
-                DateTime previousDate;
-                DateTime? createdDate = DateTime.Now;
-                List<string> allRecordIds = new List<string>();
-
-                query = Utility.Utility.GetDefaultQuery(schema);
-                
-                do
-                {
-                    previousDate = createdDate.GetValueOrDefault();
-
-                    // get records
-                    var records = GetRecordsForQuery(client, query);
-
-                    await foreach (var record in records)
-                    {
-                        if (!allRecordIds.Contains(record["Id"]))
-                        {
-                            allRecordIds.Add(record["Id"]?.ToString());
-                            allRecords.Add(record);
-                        }
-                    }
-
-                    // update query
-                    createdDate = (DateTime?) allRecords.LastOrDefault()?["CreatedDate"];
-                    query =
-                        $@"select fields(all) from {schema.Id} where CreatedDate >= {(createdDate.HasValue ? createdDate.Value.ToUniversalTime().ToString("O") : "")} order by CreatedDate asc nulls last limit 200";
-                } while (previousDate != createdDate.GetValueOrDefault() && allRecords.Count % 200 == 0);
+                allRecords = GetRecordsForDefaultQuery(client, schema);
             }
             else
             {
-                // get all records
-                allRecords = await GetRecordsForQuery(client, query).ToListAsync();
+                allRecords = GetRecordsForQuery(client, query);
             }
 
-            foreach (var rawRecord in allRecords)
+            await foreach (var rawRecord in allRecords)
             {
                 var recordMap = new Dictionary<string, object>();
                 var recordKeysMap = new Dictionary<string, object>();

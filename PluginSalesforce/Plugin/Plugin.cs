@@ -564,54 +564,30 @@ namespace PluginSalesforce.Plugin
                             if (records.Count % 100 == 0)
                             {
                                 recordsCount =
-                                    await PublishRecords(schema, limitFlag, limit, records, recordsCount,
-                                        responseStream, true);
+                                    await PublishRecords(schema, limitFlag, limit, records, recordsCount, responseStream);
                                 records.Clear();
                             }
                         }
 
                         recordsCount =
-                            await PublishRecords(schema, limitFlag, limit, records, recordsCount, responseStream, true);
+                            await PublishRecords(schema, limitFlag, limit, records, recordsCount, responseStream);
                     }
                     else
                     {
-                        // get all records
-                        // build query string
-                        var query = Utility.GetDefaultQuery(schema);
-
-                        // get records for schema page by page
-                        RecordsResponse recordsResponse;
-                        DateTime previousDate;
-                        DateTime? createdDate = DateTime.Now;
-                        do
+                        await foreach (var record in Read.GetRecordsForDefaultQuery(_client, schema))
                         {
-                            previousDate = createdDate.GetValueOrDefault();
+                            records.Add(record);
 
-                            // get records
-                            var response = await _client.GetAsync($"/query?q={HttpUtility.UrlEncode(query)}");
-                            response.EnsureSuccessStatusCode();
+                            if (records.Count % 100 == 0)
+                            {
+                                recordsCount =
+                                    await PublishRecords(schema, limitFlag, limit, records, recordsCount, responseStream);
+                                records.Clear();
+                            }
+                        }
 
-                            recordsResponse =
-                                JsonConvert.DeserializeObject<RecordsResponse>(
-                                    await response.Content.ReadAsStringAsync());
-
-                            records.AddRange(recordsResponse.Records);
-
-                            // Publish records for the given schema
-                            recordsCount =
-                                await PublishRecords(schema, limitFlag, limit, records, recordsCount, responseStream);
-
-                            // update query
-                            createdDate = (DateTime?) records.LastOrDefault()?["CreatedDate"];
-                            query =
-                                $@"select fields(all) from {schema.Id} where CreatedDate >= {(createdDate.HasValue ? createdDate.Value.ToUniversalTime().ToString("O") : "")} order by CreatedDate asc nulls last limit 200";
-
-                            // clear records
-                            records.Clear();
-                        } while (previousDate != createdDate.GetValueOrDefault() && recordsResponse.TotalSize == 200 &&
-                                 _server.Connected);
-
-                        _allRecordIds.Clear();
+                        recordsCount =
+                            await PublishRecords(schema, limitFlag, limit, records, recordsCount, responseStream);
                     }
                 }
                 Logger.Info($"Published {recordsCount} records");
@@ -622,28 +598,36 @@ namespace PluginSalesforce.Plugin
             }
         }
 
-        private readonly List<string> _allRecordIds = new List<string>();
-
         private async Task<int> PublishRecords(Schema schema, bool limitFlag, uint limit,
-            List<Dictionary<string, object>> records, int recordsCount, IServerStreamWriter<Record> responseStream,
-            bool forQuery = false)
+            List<Dictionary<string, object>> records, int recordsCount, IServerStreamWriter<Record> responseStream)
         {
             // Publish records for the given schema
-            foreach (var record in records)
+            var recordMap = new Dictionary<string, object>();
+            foreach (var rawRecord in records)
             {
                 try
                 {
-                    record.Remove("attributes");
-
                     foreach (var property in schema.Properties)
                     {
-                        if (property.Type == PropertyType.String)
+                        if (rawRecord.ContainsKey(property.Id))
                         {
-                            var value = record[property.Id];
-                            if (!(value is string))
+                            switch (property.Type)
                             {
-                                record[property.Id] = JsonConvert.SerializeObject(value);
+                                case PropertyType.String:
+                                case PropertyType.Text:
+                                case PropertyType.Decimal:
+                                    recordMap[property.Id] =
+                                        rawRecord[property.Id].ToString();
+                                    break;
+                                default:
+                                    recordMap[property.Id] =
+                                        rawRecord[property.Id];
+                                    break;
                             }
+                        }
+                        else
+                        {
+                            recordMap[property.Id] = null;
                         }
                     }
                 }
@@ -656,7 +640,7 @@ namespace PluginSalesforce.Plugin
                 var recordOutput = new Record
                 {
                     Action = Record.Types.Action.Upsert,
-                    DataJson = JsonConvert.SerializeObject(record)
+                    DataJson = JsonConvert.SerializeObject(recordMap)
                 };
 
                 // stop publishing if the limit flag is enabled and the limit has been reached
@@ -666,20 +650,8 @@ namespace PluginSalesforce.Plugin
                 }
 
                 // publish record
-                if (forQuery)
-                {
-                    await responseStream.WriteAsync(recordOutput);
-                    recordsCount++;
-                }
-                else
-                {
-                    if (!_allRecordIds.Contains(record["Id"]))
-                    {
-                        _allRecordIds.Add(record["Id"]?.ToString());
-                        await responseStream.WriteAsync(recordOutput);
-                        recordsCount++;
-                    }
-                }
+                await responseStream.WriteAsync(recordOutput);
+                recordsCount++;
             }
 
             return recordsCount;
