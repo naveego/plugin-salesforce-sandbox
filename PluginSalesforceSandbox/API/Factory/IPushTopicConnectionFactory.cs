@@ -1,8 +1,9 @@
 ﻿using System.Threading.Tasks;
-using PluginSalesforce.API.Utility;
-using PluginSalesforce.Helper;
+using PluginSalesforceSandbox.API.Utility;
+using PluginSalesforceSandbox.Helper;
+using PluginSalesforceSandbox.Helper;
 
-namespace PluginSalesforce.API.Factory
+namespace PluginSalesforceSandbox.API.Factory
 {
     public interface IPushTopicConnectionFactory
     {

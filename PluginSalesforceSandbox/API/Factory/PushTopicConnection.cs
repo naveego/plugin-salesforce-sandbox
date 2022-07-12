@@ -3,9 +3,9 @@ using System.Collections.Generic;
 using CometD.NetCore.Client;
 using Naveego.Sdk.Logging;
 using Naveego.Sdk.Plugins;
-using PluginSalesforce.API.Utility;
+using PluginSalesforceSandbox.API.Utility;
 
-namespace PluginSalesforce.API.Factory
+namespace PluginSalesforceSandbox.API.Factory
 {
     public class PushTopicConnection
     {

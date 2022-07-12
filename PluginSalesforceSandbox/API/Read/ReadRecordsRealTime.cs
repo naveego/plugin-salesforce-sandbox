@@ -9,11 +9,15 @@ using LiteDB;
 using Naveego.Sdk.Logging;
 using Naveego.Sdk.Plugins;
 using Newtonsoft.Json;
-using PluginSalesforce.API.Factory;
+using PluginSalesforce.API.Read;
 using PluginSalesforce.DataContracts;
-using PluginSalesforce.Helper;
+using PluginSalesforceSandbox.DataContracts;
+using PluginSalesforceSandbox.API.Factory;
+using PluginSalesforceSandbox.API.Utility;
+using PluginSalesforceSandbox.DataContracts;
+using PluginSalesforceSandbox.Helper;
 
-namespace PluginSalesforce.API.Read
+namespace PluginSalesforceSandbox.API.Read
 {
     public static partial class Read
     {

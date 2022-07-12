@@ -3,7 +3,7 @@ using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Threading.Tasks;
 using Naveego.Sdk.Logging;
-using PluginSalesforce.API.Utility;
+using PluginSalesforceSandbox.API.Utility;
 
 namespace PluginSalesforceSandbox.Helper
 {

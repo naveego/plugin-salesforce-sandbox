@@ -1,7 +1,7 @@
 using System.Collections.Generic;
 using Newtonsoft.Json;
 
-namespace PluginSalesforce.API.Read
+namespace PluginSalesforceSandbox.API.Read
 {
     public static partial class Read
     {

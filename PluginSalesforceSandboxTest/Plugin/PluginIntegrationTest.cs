@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using Grpc.Core;
 using Naveego.Sdk.Plugins;
 using Newtonsoft.Json;
+using PluginSalesforce.API.Read;
 using PluginSalesforceSandbox.DataContracts;
 using PluginSalesforceSandbox.API.Read;
 
@@ -319,7 +320,7 @@ namespace PluginSalesforceSandboxTest.Plugin
             // setup
             Server server = new Server
             {
-                Services = {Publisher.BindService(new PluginSalesforce.Plugin.Plugin())},
+                Services = {Publisher.BindService(new PluginSalesforceSandbox.Plugin.Plugin())},
                 Ports = {new ServerPort("localhost", 0, ServerCredentials.Insecure)}
             };
             server.Start();

@@ -5,10 +5,10 @@ using System.Net;
 using System.Threading.Tasks;
 using CometD.NetCore.Client;
 using CometD.NetCore.Client.Transport;
-using PluginSalesforce.API.Utility;
-using PluginSalesforce.Helper;
+using PluginSalesforceSandbox.API.Utility;
+using PluginSalesforceSandbox.Helper;
 
-namespace PluginSalesforce.API.Factory
+namespace PluginSalesforceSandbox.API.Factory
 {
     public class PushTopicConnectionFactory : IPushTopicConnectionFactory
     {

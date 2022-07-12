@@ -4,7 +4,7 @@ using System;
 using System.Collections.Generic;
 using Naveego.Sdk.Logging;
 
-namespace PluginSalesforce.API.Utility
+namespace PluginSalesforceSandbox.API.Utility
 {
     public class Listener : IMessageListener
     {

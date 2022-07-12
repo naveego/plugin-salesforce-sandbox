@@ -3,7 +3,7 @@ using System.Text;
 using Naveego.Sdk.Plugins;
 using Newtonsoft.Json;
 
-namespace PluginSalesforce.API.Read
+namespace PluginSalesforceSandbox.API.Read
 {
     public static partial class Read
     {
