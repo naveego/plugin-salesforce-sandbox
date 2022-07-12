@@ -20,6 +20,8 @@ using PluginSalesforceSandbox.API.Discover;
 using PluginSalesforceSandbox.API.Read;
 using PluginSalesforceSandbox.DataContracts;
 using PluginSalesforceSandbox.Helper;
+using PluginSalesforceSandbox.API.Factory;
+using PluginSalesforceSandbox.API.Utility;
 
 
 namespace PluginSalesforceSandbox.Plugin
@@ -30,11 +32,13 @@ namespace PluginSalesforceSandbox.Plugin
         private readonly HttpClient _injectedClient;
         private readonly ServerStatus _server;
         private TaskCompletionSource<bool> _tcs;
-        private ConcurrentDictionary<string, List<FieldObject>> _fieldObjectsDictionary;
+        private readonly ConcurrentDictionary<string, List<FieldObject>> _fieldObjectsDictionary;
+        private readonly IPushTopicConnectionFactory _pushTopicConnectionFactory;
 
-        public Plugin(HttpClient client = null)
+        public Plugin(HttpClient client = null, IPushTopicConnectionFactory pushTopicConnectionFactory = null)
         {
             _injectedClient = client ?? new HttpClient();
+            _pushTopicConnectionFactory = pushTopicConnectionFactory ?? new PushTopicConnectionFactory();
             _server = new ServerStatus
             {
                 Connected = false,
@@ -108,7 +112,7 @@ namespace PluginSalesforceSandbox.Plugin
             }
 
             // token url parameters
-            var redirectUrl = String.Format("{0}{1}{2}{3}", uri.Scheme, Uri.SchemeDelimiter, uri.Authority,
+            var redirectUrl = string.Format("{0}{1}{2}{3}", uri.Scheme, Uri.SchemeDelimiter, uri.Authority,
                 uri.AbsolutePath);
             var clientId = request.Configuration.ClientId;
             var clientSecret = request.Configuration.ClientSecret;
@@ -240,13 +244,28 @@ namespace PluginSalesforceSandbox.Plugin
                 };
             }
 
-            var settings = new Settings
+            var settings = new Settings();
+            if (!string.IsNullOrEmpty(oAuthState.RefreshToken))
             {
-                ClientId = request.OauthConfiguration.ClientId,
-                ClientSecret = request.OauthConfiguration.ClientSecret,
-                RefreshToken = oAuthState.RefreshToken,
-                InstanceUrl = oAuthConfig.InstanceUrl
-            };
+                settings = new Settings
+                {
+                    ClientId = request.OauthConfiguration.ClientId,
+                    ClientSecret = request.OauthConfiguration.ClientSecret,
+                    RefreshToken = oAuthState.RefreshToken,
+                    InstanceUrl = oAuthConfig.InstanceUrl
+                };
+            }
+            else
+            {
+                var _settings = JsonConvert.DeserializeObject<Settings>(request.SettingsJson);
+                
+                settings = new Settings
+                {
+                    ClientId = _settings.ClientId,
+                    ClientSecret = _settings.ClientSecret,
+                    InstanceUrl = _settings.InstanceUrl
+                };
+            }
 
             // validate settings passed in
             try
@@ -361,14 +380,15 @@ namespace PluginSalesforceSandbox.Plugin
             Logger.Info("Discovering Schemas...");
 
             DiscoverSchemasResponse discoverSchemasResponse = new DiscoverSchemasResponse();
-
+            
             // handle query based schema
             try
             {
                 if (request.Mode == DiscoverSchemasRequest.Types.Mode.Refresh && request.ToRefresh.Count == 1 &&
                     !string.IsNullOrWhiteSpace(request.ToRefresh.First().Query))
                 {
-                    discoverSchemasResponse.Schemas.Add(await Discover.GetSchemaForQuery(_client, request.ToRefresh.First(), request.SampleSize));
+                    discoverSchemasResponse.Schemas.Add(
+                        await Discover.GetSchemaForQuery(_client, request.ToRefresh.First(), request.SampleSize));
                     return discoverSchemasResponse;
                 }
             }
@@ -401,7 +421,7 @@ namespace PluginSalesforceSandbox.Plugin
                 Logger.Info($"Schemas attempted: {tabsResponse.Count}");
 
                 var tasks = tabsResponse
-                    .Select(t => Discover.GetSchemaForTab(_injectedClient, _fieldObjectsDictionary, t))
+                    .Select(t => Discover.GetSchemaForTab(_client, _fieldObjectsDictionary, t))
                     .ToArray();
 
                 await Task.WhenAll(tasks);
@@ -441,6 +461,71 @@ namespace PluginSalesforceSandbox.Plugin
         }
 
         /// <summary>
+        /// Configures the plugin for a real time read
+        /// </summary>
+        /// <param name="request"></param>
+        /// <param name="context"></param>
+        /// <returns></returns>
+        public override Task<ConfigureRealTimeResponse> ConfigureRealTime(ConfigureRealTimeRequest request,
+            ServerCallContext context)
+        {
+            Logger.Info("Configuring real time...");
+
+            
+            var schemaJson = Read.GetSchemaJson();
+            var uiJson = Read.GetUIJson();
+
+            // if subquery exists then throw unsupported feature error
+            if (Regex.IsMatch(request.Schema.Query, @"\( *[Ss][Ee][Ll][Ee][Cc][Tt]"))
+            {
+                return Task.FromResult(new ConfigureRealTimeResponse
+                {
+                    Form = new ConfigurationFormResponse
+                    {
+                        DataJson = request.Form.DataJson,
+                        DataErrorsJson = "",
+                        Errors = { "Schemas with relationship queries are not supported for real time reads at this time." },
+                        SchemaJson = schemaJson,
+                        UiJson = uiJson,
+                        StateJson = request.Form.StateJson,
+                    }
+                });
+            }
+            
+            // if first call 
+            if (string.IsNullOrWhiteSpace(request.Form.DataJson) || request.Form.DataJson == "{}")
+            {
+                return Task.FromResult(new ConfigureRealTimeResponse
+                {
+                    Form = new ConfigurationFormResponse
+                    {
+                        DataJson = request.Form.DataJson,
+                        DataErrorsJson = "",
+                        Errors = { },
+                        SchemaJson = schemaJson,
+                        UiJson = uiJson,
+                        StateJson = request.Form.StateJson,
+                    }
+                });
+            }
+            
+            // TODO: Enhancement - Validate if the passed in channel name is valid and covers all the properties of the schema
+
+            return Task.FromResult(new ConfigureRealTimeResponse
+            {
+                Form = new ConfigurationFormResponse
+                {
+                    DataJson = request.Form.DataJson,
+                    DataErrorsJson = "",
+                    Errors = { },
+                    SchemaJson = schemaJson,
+                    UiJson = uiJson,
+                    StateJson = request.Form.StateJson,
+                }
+            });
+        }
+
+        /// <summary>
         /// Publishes a stream of data for a given schema
         /// </summary>
         /// <param name="request"></param>
@@ -460,68 +545,76 @@ namespace PluginSalesforceSandbox.Plugin
             try
             {
                 var recordsCount = 0;
-                var records = new List<Dictionary<string, object>>();
-
-                if (!string.IsNullOrWhiteSpace(schema.Query))
+                
+                if (!string.IsNullOrWhiteSpace(request.RealTimeSettingsJson))
                 {
-                    await foreach (var record in Read.GetRecordsForQuery(_client, schema))
-                    {
-                        records.Add(record);
-
-                        if (records.Count % 100 == 0)
-                        {
-                            recordsCount =
-                                await PublishRecords(schema, limitFlag, limit, records, recordsCount, responseStream, true);
-                            records.Clear();
-                        }
-                    }
-                    
-                    recordsCount =
-                        await PublishRecords(schema, limitFlag, limit, records, recordsCount, responseStream, true);
-                    
-                    Logger.Info($"Published {recordsCount} records");
+                    recordsCount = await Read.ReadRecordsRealTimeAsync(_client, request, responseStream,
+                        context, _server.Config.PermanentDirectory, _pushTopicConnectionFactory);
                 }
                 else
                 {
-                    // get all records
-                    // build query string
-                    var query = $@"select fields(all) from {schema.Id} order by CreatedDate asc nulls last limit 200";
+                    var records = new List<Dictionary<string, object>>();
 
-                    // get records for schema page by page
-                    RecordsResponse recordsResponse;
-                    DateTime previousDate;
-                    DateTime? createdDate = DateTime.Now;
-                    do
+                    if (!string.IsNullOrWhiteSpace(schema.Query))
                     {
-                        previousDate = createdDate.GetValueOrDefault();
+                        await foreach (var record in Read.GetRecordsForQuery(_client, schema, schema.Query))
+                        {
+                            records.Add(record);
 
-                        // get records
-                        var response = await _client.GetAsync($"/query?q={HttpUtility.UrlEncode(query)}");
-                        response.EnsureSuccessStatusCode();
+                            if (records.Count % 100 == 0)
+                            {
+                                recordsCount =
+                                    await PublishRecords(schema, limitFlag, limit, records, recordsCount,
+                                        responseStream, true);
+                                records.Clear();
+                            }
+                        }
 
-                        recordsResponse =
-                            JsonConvert.DeserializeObject<RecordsResponse>(await response.Content.ReadAsStringAsync());
-
-                        records.AddRange(recordsResponse.Records);
-
-                        // Publish records for the given schema
                         recordsCount =
-                            await PublishRecords(schema, limitFlag, limit, records, recordsCount, responseStream);
+                            await PublishRecords(schema, limitFlag, limit, records, recordsCount, responseStream, true);
+                    }
+                    else
+                    {
+                        // get all records
+                        // build query string
+                        var query = Utility.GetDefaultQuery(schema);
 
-                        // update query
-                        createdDate = (DateTime?) records.LastOrDefault()?["CreatedDate"];
-                        query =
-                            $@"select fields(all) from {schema.Id} where CreatedDate >= {(createdDate.HasValue ? createdDate.Value.ToUniversalTime().ToString("O") : "")} order by CreatedDate asc nulls last limit 200";
+                        // get records for schema page by page
+                        RecordsResponse recordsResponse;
+                        DateTime previousDate;
+                        DateTime? createdDate = DateTime.Now;
+                        do
+                        {
+                            previousDate = createdDate.GetValueOrDefault();
 
-                        // clear records
-                        records.Clear();
-                    } while (previousDate != createdDate.GetValueOrDefault() && recordsResponse.TotalSize == 200 &&
-                             _server.Connected);
+                            // get records
+                            var response = await _client.GetAsync($"/query?q={HttpUtility.UrlEncode(query)}");
+                            response.EnsureSuccessStatusCode();
 
-                    _allRecordIds.Clear();
+                            recordsResponse =
+                                JsonConvert.DeserializeObject<RecordsResponse>(
+                                    await response.Content.ReadAsStringAsync());
 
-                    Logger.Info($"Published {recordsCount} records");
+                            records.AddRange(recordsResponse.Records);
+
+                            // Publish records for the given schema
+                            recordsCount =
+                                await PublishRecords(schema, limitFlag, limit, records, recordsCount, responseStream);
+
+                            // update query
+                            createdDate = (DateTime?) records.LastOrDefault()?["CreatedDate"];
+                            query =
+                                $@"select fields(all) from {schema.Id} where CreatedDate >= {(createdDate.HasValue ? createdDate.Value.ToUniversalTime().ToString("O") : "")} order by CreatedDate asc nulls last limit 200";
+
+                            // clear records
+                            records.Clear();
+                        } while (previousDate != createdDate.GetValueOrDefault() && recordsResponse.TotalSize == 200 &&
+                                 _server.Connected);
+
+                        _allRecordIds.Clear();
+                    }
                 }
+                Logger.Info($"Published {recordsCount} records");
             }
             catch (Exception e)
             {
@@ -532,7 +625,8 @@ namespace PluginSalesforceSandbox.Plugin
         private readonly List<string> _allRecordIds = new List<string>();
 
         private async Task<int> PublishRecords(Schema schema, bool limitFlag, uint limit,
-            List<Dictionary<string, object>> records, int recordsCount, IServerStreamWriter<Record> responseStream, bool forQuery = false)
+            List<Dictionary<string, object>> records, int recordsCount, IServerStreamWriter<Record> responseStream,
+            bool forQuery = false)
         {
             // Publish records for the given schema
             foreach (var record in records)
