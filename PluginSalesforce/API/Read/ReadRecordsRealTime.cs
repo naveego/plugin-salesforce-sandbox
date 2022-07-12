@@ -1,9 +1,11 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
 using System.Threading.Tasks;
+using System.Web;
 using Grpc.Core;
 using LiteDB;
 using Naveego.Sdk.Logging;
@@ -88,10 +90,6 @@ namespace PluginSalesforce.API.Read
                     }
 
                     var query = schema.Query;
-                    if (string.IsNullOrWhiteSpace(query))
-                    {
-                        query = Utility.Utility.GetDefaultQuery(schema);
-                    }
 
                     // update real time state
                     realTimeState.LastReadTime = DateTime.UtcNow;
@@ -145,6 +143,7 @@ namespace PluginSalesforce.API.Read
                                         DataJson = JsonConvert.SerializeObject(recordMap)
                                     };
                                     await responseStream.WriteAsync(deleteRecord);
+                                    recordsCount++;
                                     break;
                                 case "GAP_OVERFLOW":
                                 case "GAP_CREATE":
@@ -355,10 +354,45 @@ namespace PluginSalesforce.API.Read
             RealTimeState realTimeState, List<string> schemaKeys, long recordsCount,
             ILiteCollection<RealTimeRecord> realtimeRecordsCollection, IServerStreamWriter<Record> responseStream)
         {
-            // get all records
-            var allRecords = GetRecordsForQuery(client, schema, query);
+            List<Dictionary<string, object>> allRecords = new List<Dictionary<string, object>>();
+            
+            if (string.IsNullOrWhiteSpace(query))
+            {
+                DateTime previousDate;
+                DateTime? createdDate = DateTime.Now;
+                List<string> allRecordIds = new List<string>();
 
-            await foreach (var rawRecord in allRecords)
+                query = Utility.Utility.GetDefaultQuery(schema);
+                
+                do
+                {
+                    previousDate = createdDate.GetValueOrDefault();
+
+                    // get records
+                    var records = GetRecordsForQuery(client, query);
+
+                    await foreach (var record in records)
+                    {
+                        if (!allRecordIds.Contains(record["Id"]))
+                        {
+                            allRecordIds.Add(record["Id"]?.ToString());
+                            allRecords.Add(record);
+                        }
+                    }
+
+                    // update query
+                    createdDate = (DateTime?) allRecords.LastOrDefault()?["CreatedDate"];
+                    query =
+                        $@"select fields(all) from {schema.Id} where CreatedDate >= {(createdDate.HasValue ? createdDate.Value.ToUniversalTime().ToString("O") : "")} order by CreatedDate asc nulls last limit 200";
+                } while (previousDate != createdDate.GetValueOrDefault() && allRecords.Count % 200 == 0);
+            }
+            else
+            {
+                // get all records
+                allRecords = await GetRecordsForQuery(client, query).ToListAsync();
+            }
+
+            foreach (var rawRecord in allRecords)
             {
                 var recordMap = new Dictionary<string, object>();
                 var recordKeysMap = new Dictionary<string, object>();
@@ -395,6 +429,7 @@ namespace PluginSalesforce.API.Read
                     DataJson = JsonConvert.SerializeObject(realTimeRecord.RecordKeysMap)
                 };
                 await responseStream.WriteAsync(record);
+                recordsCount++;
             }
 
             // commit real time state after completing the init

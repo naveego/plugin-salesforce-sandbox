@@ -10,7 +10,7 @@ namespace PluginSalesforce.API.Read
 {
     public static partial class Read
     {
-        public static async IAsyncEnumerable<Dictionary<string, object>> GetRecordsForQuery(RequestHelper client, Schema schema, string query)
+        public static async IAsyncEnumerable<Dictionary<string, object>> GetRecordsForQuery(RequestHelper client, string query)
         {
             // get records
             var response = await client.GetAsync($"/query?q={HttpUtility.UrlEncode(query)}");

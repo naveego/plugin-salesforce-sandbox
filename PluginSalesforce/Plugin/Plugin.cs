@@ -557,7 +557,7 @@ namespace PluginSalesforce.Plugin
 
                     if (!string.IsNullOrWhiteSpace(schema.Query))
                     {
-                        await foreach (var record in Read.GetRecordsForQuery(_client, schema, schema.Query))
+                        await foreach (var record in Read.GetRecordsForQuery(_client, schema.Query))
                         {
                             records.Add(record);
 
