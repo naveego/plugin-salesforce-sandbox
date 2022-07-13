@@ -1,9 +1,11 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
 using System.Threading.Tasks;
+using System.Web;
 using Grpc.Core;
 using LiteDB;
 using Naveego.Sdk.Logging;
@@ -88,10 +90,6 @@ namespace PluginSalesforce.API.Read
                     }
 
                     var query = schema.Query;
-                    if (string.IsNullOrWhiteSpace(query))
-                    {
-                        query = Utility.Utility.GetDefaultQuery(schema);
-                    }
 
                     // update real time state
                     realTimeState.LastReadTime = DateTime.UtcNow;
@@ -145,6 +143,7 @@ namespace PluginSalesforce.API.Read
                                         DataJson = JsonConvert.SerializeObject(recordMap)
                                     };
                                     await responseStream.WriteAsync(deleteRecord);
+                                    recordsCount++;
                                     break;
                                 case "GAP_OVERFLOW":
                                 case "GAP_CREATE":
@@ -355,8 +354,17 @@ namespace PluginSalesforce.API.Read
             RealTimeState realTimeState, List<string> schemaKeys, long recordsCount,
             ILiteCollection<RealTimeRecord> realtimeRecordsCollection, IServerStreamWriter<Record> responseStream)
         {
+            IAsyncEnumerable<Dictionary<string, object>> allRecords;
+            
             // get all records
-            var allRecords = GetRecordsForQuery(client, schema, query);
+            if (string.IsNullOrWhiteSpace(query))
+            {
+                allRecords = GetRecordsForDefaultQuery(client, schema);
+            }
+            else
+            {
+                allRecords = GetRecordsForQuery(client, query);
+            }
 
             await foreach (var rawRecord in allRecords)
             {
@@ -395,6 +403,7 @@ namespace PluginSalesforce.API.Read
                     DataJson = JsonConvert.SerializeObject(realTimeRecord.RecordKeysMap)
                 };
                 await responseStream.WriteAsync(record);
+                recordsCount++;
             }
 
             // commit real time state after completing the init
