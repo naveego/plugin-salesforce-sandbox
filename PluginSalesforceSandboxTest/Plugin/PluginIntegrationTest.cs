@@ -42,6 +42,16 @@ namespace PluginSalesforceSandboxTest.Plugin
             };
         }
         
+        private Schema GetTestSchema(string endpointId = null, string id = "test", string name = "test", string query = "")
+        {
+            return new Schema
+            {
+                Id = id,
+                Name = name,
+                Query = query
+            };
+        }
+        
         [Fact]
         public async Task ConnectSessionTest()
         {
@@ -304,15 +314,7 @@ namespace PluginSalesforceSandboxTest.Plugin
             await channel.ShutdownAsync();
             await server.ShutdownAsync();
         }
-        private Schema GetTestSchema(string endpointId = null, string id = "test", string name = "test", string query = "")
-        {
-            return new Schema
-            {
-                Id = id,
-                Name = name,
-                Query = query
-            };
-        }
+        
         [Fact]
         public async Task ReadStreamRealTimeTest()
         {
@@ -339,10 +341,7 @@ namespace PluginSalesforceSandboxTest.Plugin
             };
             
             var schema = GetTestSchema(null, @"Lead", @"Lead");
-            // var schema = GetTestSchema(null, @"LeadUpdates", @"LeadUpdates", "Select Id, Name FROM Lead");
-            // var schema = GetTestSchema(null, @"/topic/LeadUpdates", @"/topic/LeadUpdates", "Select Id, Name FROM Lead");
 
-            
             var connectRequest = GetConnectSettings();
 
             var schemaRequest = new DiscoverSchemasRequest
@@ -404,6 +403,7 @@ namespace PluginSalesforceSandboxTest.Plugin
             await channel.ShutdownAsync();
             await server.ShutdownAsync();
         }
+        
         [Fact]
         public async Task ReadStreamQueryTest()
         {

@@ -317,7 +317,8 @@ namespace PluginSalesforceSandboxTest.Plugin
             await channel.ShutdownAsync();
             await server.ShutdownAsync();
         }
-[Fact]
+        
+        [Fact]
         public async Task ReadStreamRealTimeTest()
         {
             // setup
@@ -391,6 +392,7 @@ namespace PluginSalesforceSandboxTest.Plugin
             await channel.ShutdownAsync();
             await server.ShutdownAsync();
         }
+        
         [Fact]
         public async Task ReadStreamTest()
         {
