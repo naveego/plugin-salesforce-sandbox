@@ -251,7 +251,7 @@ namespace PluginSalesforceSandboxTest.Plugin
             {
                 Schema = new Schema
                 {
-                    Id = "Policy__c",
+                    Id = "Lead",
                     Properties =
                     {
                         new Property
@@ -299,7 +299,7 @@ namespace PluginSalesforceSandboxTest.Plugin
             }
 
             // assert
-            Assert.Equal(14538, records.Count);
+            Assert.Equal(1023, records.Count);
 
             // cleanup
             await channel.ShutdownAsync();
@@ -352,9 +352,12 @@ namespace PluginSalesforceSandboxTest.Plugin
                 ToRefresh = {schema}
             };
 
-            var realTimeSettings = new RealTimeSettings();
-            realTimeSettings.ChannelName = "AccountQA";
-            
+            var realTimeSettings = new RealTimeSettings
+            {
+                ChannelName = "LeadsAll",
+                BatchWindowSeconds = 5
+            };
+
             var request = new ReadRequest()
             {
                 DataVersions = new DataVersions
@@ -377,12 +380,10 @@ namespace PluginSalesforceSandboxTest.Plugin
                 request.Schema = schemasResponse.Schemas[0];
 
                 var cancellationToken = new CancellationTokenSource();
-                cancellationToken.CancelAfter(5000);
-                cancellationToken.CancelAfter(500000);
+                cancellationToken.CancelAfter(10000);
                 var response = client.ReadStream(request, null, null, cancellationToken.Token);
                 var responseStream = response.ResponseStream;
-
-
+                
                 while (await responseStream.MoveNext())
                 {
                     records.Add(responseStream.Current);
@@ -390,12 +391,12 @@ namespace PluginSalesforceSandboxTest.Plugin
             }
             catch (Exception e)
             {
-                Assert.Equal("Status(StatusCode=\"Cancelled\", Detail=\"Cancelled\")", e.Message);
+                Assert.Contains("Status(StatusCode=\"Cancelled\", Detail=\"Cancelled\"", e.Message);
             }
 
 
             // assert
-            Assert.Equal(3, records.Count);
+            Assert.Equal(1023, records.Where(r => r.Action == Record.Types.Action.Upsert).ToList().Count);
 
             var record = JsonConvert.DeserializeObject<Dictionary<string, object>>(records[0].DataJson);
             // Assert.Equal("~", record["tilde"]);

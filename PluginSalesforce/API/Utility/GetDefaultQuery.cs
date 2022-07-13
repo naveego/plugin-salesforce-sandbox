@@ -1,6 +1,6 @@
 ﻿using Naveego.Sdk.Plugins;
 
-namespace PluginSalesforceSandbox.API.Utility
+namespace PluginSalesforce.API.Utility
 {
     public static partial class Utility
     {
