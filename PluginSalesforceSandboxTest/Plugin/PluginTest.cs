@@ -8,7 +8,6 @@ using Grpc.Core;
 using LiteDB;
 using Naveego.Sdk.Plugins;
 using Newtonsoft.Json;
-using PluginSalesforce.API.Read;
 using PluginSalesforceSandbox.DataContracts;
 using PluginSalesforceSandbox.API.Read;
 

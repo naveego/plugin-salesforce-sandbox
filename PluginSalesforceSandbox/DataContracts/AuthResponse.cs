@@ -1,6 +1,6 @@
 ﻿using Newtonsoft.Json;
 
-namespace PluginSalesforce.DataContracts
+namespace PluginSalesforceSandbox.DataContracts
 {
     public class AuthResponse
     {

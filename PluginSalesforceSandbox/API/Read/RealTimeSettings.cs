@@ -1,6 +1,4 @@
-using System.Collections.Generic;
-
-namespace PluginSalesforce.API.Read
+namespace PluginSalesforceSandbox.API.Read
 {
     public class RealTimeSettings
     {

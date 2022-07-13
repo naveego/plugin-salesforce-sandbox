@@ -7,7 +7,6 @@ using System.Threading.Tasks;
 using Grpc.Core;
 using Naveego.Sdk.Plugins;
 using Newtonsoft.Json;
-using PluginSalesforce.API.Read;
 using PluginSalesforceSandbox.DataContracts;
 using PluginSalesforceSandbox.API.Read;
 

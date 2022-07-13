@@ -9,8 +9,6 @@ using LiteDB;
 using Naveego.Sdk.Logging;
 using Naveego.Sdk.Plugins;
 using Newtonsoft.Json;
-using PluginSalesforce.API.Read;
-using PluginSalesforce.DataContracts;
 using PluginSalesforceSandbox.DataContracts;
 using PluginSalesforceSandbox.API.Factory;
 using PluginSalesforceSandbox.API.Utility;
