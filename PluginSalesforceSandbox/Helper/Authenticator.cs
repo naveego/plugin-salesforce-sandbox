@@ -38,14 +38,15 @@ namespace PluginSalesforceSandbox.Helper
                     // get a token
                     var requestUri = "https://test.salesforce.com/services/oauth2/token";
 
+                    
                     var formData = new List<KeyValuePair<string, string>>
                     {
-                        new KeyValuePair<string, string>("grant_type", "refresh_token"),
                         new KeyValuePair<string, string>("client_id", _settings.ClientId),
                         new KeyValuePair<string, string>("client_secret", _settings.ClientSecret),
+                        new KeyValuePair<string, string>("grant_type", "refresh_token"),
                         new KeyValuePair<string, string>("refresh_token", _settings.RefreshToken)
                     };
-
+                    
                     var body = new FormUrlEncodedContent(formData);
                     
                     var client = _client;
