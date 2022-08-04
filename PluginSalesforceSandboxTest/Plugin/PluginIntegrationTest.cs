@@ -222,7 +222,8 @@ namespace PluginSalesforceSandboxTest.Plugin
             var request = new DiscoverSchemasRequest
             {
                 Mode = DiscoverSchemasRequest.Types.Mode.Refresh,
-                ToRefresh = {new Schema {Id = "Custom", Name = "Custom", Query = "SELECT id, name from Account"}}
+                ToRefresh = {new Schema {Id = "Custom", Name = "Custom", Query = "SELECT id, name from Account"}},
+                SampleSize = 10
             };
 
             // act
@@ -447,7 +448,7 @@ namespace PluginSalesforceSandboxTest.Plugin
             }
 
             // assert
-            Assert.Equal(12, records.Count);
+            Assert.Equal(13, records.Count);
 
             // cleanup
             await channel.ShutdownAsync();
