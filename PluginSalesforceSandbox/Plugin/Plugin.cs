@@ -611,18 +611,25 @@ namespace PluginSalesforceSandbox.Plugin
                     {
                         if (rawRecord.ContainsKey(property.Id))
                         {
-                            switch (property.Type)
+                            if (rawRecord[property.Id] == null)
                             {
-                                case PropertyType.String:
-                                case PropertyType.Text:
-                                case PropertyType.Decimal:
-                                    recordMap[property.Id] =
-                                        rawRecord[property.Id].ToString();
-                                    break;
-                                default:
-                                    recordMap[property.Id] =
-                                        rawRecord[property.Id];
-                                    break;
+                                recordMap[property.Id] = null;
+                            }
+                            else
+                            {
+                                switch (property.Type)
+                                {
+                                    case PropertyType.String:
+                                    case PropertyType.Text:
+                                    case PropertyType.Decimal:
+                                        recordMap[property.Id] =
+                                            rawRecord[property.Id].ToString();
+                                        break;
+                                    default:
+                                        recordMap[property.Id] =
+                                            rawRecord[property.Id];
+                                        break;
+                                }
                             }
                         }
                         else
