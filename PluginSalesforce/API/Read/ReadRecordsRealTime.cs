@@ -294,30 +294,39 @@ namespace PluginSalesforce.API.Read
                 {
                     if (rawRecord.ContainsKey(property.Id))
                     {
-                        switch (property.Type)
+                        if (rawRecord[property.Id] == null)
                         {
-                            case PropertyType.String:
-                            case PropertyType.Text:
-                            case PropertyType.Decimal:
-                                recordMap[property.Id] =
-                                    rawRecord[property.Id].ToString();
-                                if (property.IsKey)
-                                {
-                                    recordKeysMap[property.Id] =
+                            recordMap[property.Id] = null;
+                            if (property.IsKey)
+                            {
+                                recordKeysMap[property.Id] = null;
+                            }
+                        }
+                        else
+                        {
+                            switch (property.Type)
+                            {
+                                case PropertyType.String:
+                                case PropertyType.Text:
+                                case PropertyType.Decimal:
+                                    recordMap[property.Id] =
                                         rawRecord[property.Id].ToString();
-                                }
-
-                                break;
-                            default:
-                                recordMap[property.Id] =
-                                    rawRecord[property.Id];
-                                if (property.IsKey)
-                                {
-                                    recordKeysMap[property.Id] =
+                                    if (property.IsKey)
+                                    {
+                                        recordKeysMap[property.Id] =
+                                            rawRecord[property.Id].ToString();
+                                    }
+                                    break;
+                                default:
+                                    recordMap[property.Id] =
                                         rawRecord[property.Id];
-                                }
-
-                                break;
+                                    if (property.IsKey)
+                                    {
+                                        recordKeysMap[property.Id] =
+                                            rawRecord[property.Id];
+                                    }
+                                    break;
+                            }
                         }
                     }
                     else
