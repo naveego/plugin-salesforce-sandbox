@@ -339,7 +339,8 @@ namespace PluginSalesforceTest.Plugin
                 LogLevel = LogLevel.Debug
             };
             
-            var schema = GetTestSchema(null, @"Lead", @"Lead");
+            var schema = GetTestSchema(null, @"Contact", @"Contact");
+            // var schema = GetTestSchema(null, @"Lead", @"Lead");
             // var schema = GetTestSchema(null, @"LeadUpdates", @"LeadUpdates", "Select Id, Name FROM Lead");
             // var schema = GetTestSchema(null, @"/topic/LeadUpdates", @"/topic/LeadUpdates", "Select Id, Name FROM Lead");
 
@@ -354,7 +355,8 @@ namespace PluginSalesforceTest.Plugin
 
             var realTimeSettings = new RealTimeSettings
             {
-                ChannelName = "LeadsAll",
+                ChannelName = "Contacts_IdName",
+                // ChannelName = "LeadsAll",
                 BatchWindowSeconds = 5
             };
 
@@ -380,7 +382,7 @@ namespace PluginSalesforceTest.Plugin
                 request.Schema = schemasResponse.Schemas[0];
 
                 var cancellationToken = new CancellationTokenSource();
-                cancellationToken.CancelAfter(10000);
+                cancellationToken.CancelAfter(10000*10000);
                 var response = client.ReadStream(request, null, null, cancellationToken.Token);
                 var responseStream = response.ResponseStream;
                 
