@@ -491,23 +491,6 @@ namespace PluginSalesforceSandbox.Plugin
                     }
                 });
             }
-
-            if (request.Schema.Properties.Count(p => p.IsKey) != 1 &&
-                request.Schema.Properties.Any(p => p.IsKey && p.Id.ToLower() != "id"))
-            {
-                return Task.FromResult(new ConfigureRealTimeResponse
-                {
-                    Form = new ConfigurationFormResponse
-                    {
-                        DataJson = request.Form.DataJson,
-                        DataErrorsJson = "",
-                        Errors = { "Salesforce only supports deletion based on ID alone at this time. Please ensure the Salesforce property named  \"id\" is included in the query and is the only key property on the schema." },
-                        SchemaJson = schemaJson,
-                        UiJson = uiJson,
-                        StateJson = request.Form.StateJson,
-                    }
-                });
-            }
             
             if (request.Schema.Properties.Count(p => p.IsKey) != 1 &&
                 request.Schema.Properties.Any(p => p.IsKey && p.Id.ToLower() != "id"))
