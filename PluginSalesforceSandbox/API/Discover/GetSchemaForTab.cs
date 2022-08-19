@@ -65,7 +65,7 @@ namespace PluginSalesforceSandbox.API.Discover
                         Id = field.Name,
                         Name = field.Label,
                         Type = GetPropertyType(field),
-                        IsKey = field.IdLookup,
+                        IsKey = field.Name.ToLower() == "id",
                         IsCreateCounter = field.Name == "CreatedDate",
                         IsUpdateCounter = field.Name == "LastModifiedDate",
                         TypeAtSource = field.Type,

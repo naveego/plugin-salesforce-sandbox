@@ -132,6 +132,7 @@ namespace PluginSalesforceSandbox.API.Read
                                         realtimeRecordsCollection.FindOne(r => r.Id == recordId);
                                     if (realtimeRecord == null)
                                     {
+                                        Logger.Info($"Record {recordId} not found skipping delete event");
                                         continue;
                                     }
 
