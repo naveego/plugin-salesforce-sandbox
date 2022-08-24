@@ -23,7 +23,7 @@ namespace PluginSalesforceSandboxTest.Plugin
         {
             return new ConnectRequest
             {
-                SettingsJson = {},
+                SettingsJson = "",
                 OauthConfiguration = new OAuthConfiguration
                 {
                     ClientId = "",
@@ -431,7 +431,7 @@ namespace PluginSalesforceSandboxTest.Plugin
             var discoverRequest = new DiscoverSchemasRequest
             {
                 Mode = DiscoverSchemasRequest.Types.Mode.Refresh,
-                ToRefresh = {new Schema {Id = "Custom", Name = "Custom", Query = "SELECT id, name from Account"}}
+                ToRefresh = {new Schema {Id = "Custom", Name = "Custom", Query = "SELECT Id, Name, Industry, LastModifiedDate, (SELECT Id, Name FROM Contacts) FROM Account WHEE Industry in ('Biotechnology', 'Energy')"}}
             };
 
             // act
@@ -453,7 +453,7 @@ namespace PluginSalesforceSandboxTest.Plugin
             }
 
             // assert
-            Assert.Equal(13, records.Count);
+            Assert.Equal(4, records.Count);
 
             // cleanup
             await channel.ShutdownAsync();
