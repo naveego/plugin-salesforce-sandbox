@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Net.Http;
 using System.Web;
@@ -50,7 +51,15 @@ namespace PluginSalesforce.API.Read
         {
             // get records
             var response = await client.GetAsync($"/query?q={HttpUtility.UrlEncode(query)}");
-            response.EnsureSuccessStatusCode();
+            try
+            {
+                response.EnsureSuccessStatusCode();
+            }
+            catch (Exception e)
+            {
+                var errorBody = await response.Content.ReadAsStringAsync();
+                throw new Exception(errorBody);
+            }
             
             var recordsResponse =
                 JsonConvert.DeserializeObject<RecordsResponse>(await response.Content.ReadAsStringAsync());
