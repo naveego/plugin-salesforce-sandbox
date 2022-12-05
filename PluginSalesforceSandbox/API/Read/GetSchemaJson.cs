@@ -25,7 +25,7 @@ namespace PluginSalesforceSandbox.API.Read
                     {
                         {"type", "string"},
                         {"title", "Channel Name"},
-                        {"description", "Enter the name of the channel in Salesforce. The channel must contain the \"id\" column and the \"id\" property must be the only key property in the input. To create or find an existing channel, please refer to this documentation: https://docs.naveego.com/docs/plugins/plugin-salesforce-realtime.html"}
+                        {"description", "Enter the name of the channel in Salesforce. The channel must contain the \"id\" column and the \"id\" property must be the only key property in the input. To create or find an existing channel, please refer to this documentation: https://docs.augr.aunsight.com/plugins/plugin-salesforce-realtime"}
                     }}
                 }},
                 {"required", new []
