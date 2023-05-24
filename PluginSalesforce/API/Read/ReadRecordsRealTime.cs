@@ -49,6 +49,7 @@ namespace PluginSalesforce.API.Read
                 ? JsonConvert.DeserializeObject<RealTimeState>(request.RealTimeStateJson)
                 : new RealTimeState();
 
+            // build cometd client
             var conn = connectionFactory.GetPushTopicConnection(client, @"/topic/" + realTimeSettings.ChannelName);
 
             try
@@ -61,11 +62,10 @@ namespace PluginSalesforce.API.Read
 
                 using (var db = new LiteDatabase(Path.Join(path, $"{jobId}_RealTimeReadRecords.db")))
                 {
-                    var realtimeRecordsCollection = db.GetCollection<RealTimeRecord>(CollectionName);
-
-                    // build cometd client
                     conn.Connect();
-
+                    
+                    var realtimeRecordsCollection = db.GetCollection<RealTimeRecord>(CollectionName);
+                    
                     // a full init needs to happen
                     if (jobVersion > realTimeState.JobVersion || shapeVersion > realTimeState.ShapeVersion)
                     {

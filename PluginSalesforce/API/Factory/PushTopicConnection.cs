@@ -34,6 +34,10 @@ namespace PluginSalesforce.API.Factory
 
         public async IAsyncEnumerable<string> GetCurrentMessages()
         {
+            if (!_bayeuxClient.Connected) {
+                Connect();
+            }
+
             var messages = _listener.GetMessages();
             
             foreach (var message in messages)
