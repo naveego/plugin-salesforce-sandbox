@@ -28,7 +28,7 @@ namespace PluginSalesforce.DataContracts
         public DateTime CreatedDate { get; set; }
         
         [JsonProperty("replayId")]
-        public Int32 ReplayId { get; set; }
+        public long ReplayId { get; set; }
         
         [JsonProperty("type")]
         public string Type { get; set; }

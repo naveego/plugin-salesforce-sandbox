@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Threading;
 using CometD.NetCore.Client;
 using Naveego.Sdk.Logging;
 using Naveego.Sdk.Plugins;
@@ -13,6 +14,8 @@ namespace PluginSalesforce.API.Factory
         private readonly Listener _listener = null;
         private readonly string _channel = "";
 
+        private CancellationTokenSource _cts;
+
         public PushTopicConnection(BayeuxClient bayeuxClient, string channel)
         {
             _bayeuxClient = bayeuxClient;
@@ -21,6 +24,11 @@ namespace PluginSalesforce.API.Factory
         }
         public void Connect()
         {
+            // force the client to reconnect after 30 minutes
+            _cts = new CancellationTokenSource();
+            _cts.CancelAfter(1800 * 1000);
+
+            // connect the client
             _bayeuxClient.Handshake();
             _bayeuxClient.WaitFor(1000, new[] { BayeuxClient.State.CONNECTED });
             _bayeuxClient.GetChannel(_channel).Subscribe(_listener);
@@ -34,7 +42,13 @@ namespace PluginSalesforce.API.Factory
 
         public async IAsyncEnumerable<string> GetCurrentMessages()
         {
+            if (_cts.IsCancellationRequested) {
+                Logger.Debug("request to disconnect stream requested");
+                Disconnect();
+            }
+
             if (!_bayeuxClient.Connected) {
+                Logger.Debug("request to connect stream requested");
                 Connect();
             }
 
