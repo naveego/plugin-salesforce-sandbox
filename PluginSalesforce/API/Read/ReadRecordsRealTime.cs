@@ -64,6 +64,7 @@ namespace PluginSalesforce.API.Read
                 : new RealTimeState();
 
             _requestHelper = requestHelper;
+            _connectionFactory = connectionFactory;
 
             GetConnectedPushTopicConnection();
 
