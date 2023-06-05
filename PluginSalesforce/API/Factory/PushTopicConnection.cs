@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Threading;
 using CometD.NetCore.Client;
 using Naveego.Sdk.Logging;
 using Naveego.Sdk.Plugins;
@@ -21,6 +22,7 @@ namespace PluginSalesforce.API.Factory
         }
         public void Connect()
         {
+            // connect the client
             _bayeuxClient.Handshake();
             _bayeuxClient.WaitFor(1000, new[] { BayeuxClient.State.CONNECTED });
             _bayeuxClient.GetChannel(_channel).Subscribe(_listener);
@@ -34,6 +36,11 @@ namespace PluginSalesforce.API.Factory
 
         public async IAsyncEnumerable<string> GetCurrentMessages()
         {
+            if (!_bayeuxClient.Connected) {
+                Logger.Debug("request to connect stream requested");
+                Connect();
+            }
+
             var messages = _listener.GetMessages();
             
             foreach (var message in messages)
