@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Security.Cryptography;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using Grpc.Core;
 using LiteDB;
@@ -19,7 +20,20 @@ namespace PluginSalesforceSandbox.API.Read
 {
     public static partial class Read
     {
+        // constants
         private const string CollectionName = "realtimerecord";
+
+        // connection client settings
+        private static IPushTopicConnectionFactory _connectionFactory;
+        private static RealTimeSettings _realTimeSettings;
+        private static RequestHelper _requestHelper;
+
+        // connection client
+        private static CancellationTokenSource _cts;
+        private static PushTopicConnection _conn;
+
+        // state
+        private static RealTimeState _realTimeState;
 
         public class RealTimeRecord
         {
@@ -29,7 +43,7 @@ namespace PluginSalesforceSandbox.API.Read
             [BsonField] public byte[] RecordDataHash { get; set; }
         }
 
-        public static async Task<int> ReadRecordsRealTimeAsync(RequestHelper client, ReadRequest request,
+        public static async Task<int> ReadRecordsRealTimeAsync(RequestHelper requestHelper, ReadRequest request,
             IServerStreamWriter<Record> responseStream,
             ServerCallContext context, string permanentPath, IPushTopicConnectionFactory connectionFactory)
         {
@@ -43,13 +57,16 @@ namespace PluginSalesforceSandbox.API.Read
             var recordsCount = 0;
             var runId = Guid.NewGuid().ToString();
 
-            var realTimeSettings =
+            _realTimeSettings =
                 JsonConvert.DeserializeObject<RealTimeSettings>(request.RealTimeSettingsJson);
-            var realTimeState = !string.IsNullOrWhiteSpace(request.RealTimeStateJson)
+            _realTimeState = !string.IsNullOrWhiteSpace(request.RealTimeStateJson)
                 ? JsonConvert.DeserializeObject<RealTimeState>(request.RealTimeStateJson)
                 : new RealTimeState();
 
-            var conn = connectionFactory.GetPushTopicConnection(client, @"/topic/" + realTimeSettings.ChannelName);
+            _requestHelper = requestHelper;
+            _connectionFactory = connectionFactory;
+
+            GetConnectedPushTopicConnection();
 
             try
             {
@@ -62,17 +79,14 @@ namespace PluginSalesforceSandbox.API.Read
                 using (var db = new LiteDatabase(Path.Join(path, $"{jobId}_RealTimeReadRecords.db")))
                 {
                     var realtimeRecordsCollection = db.GetCollection<RealTimeRecord>(CollectionName);
-
-                    // build cometd client
-                    conn.Connect();
-
+                    
                     // a full init needs to happen
-                    if (jobVersion > realTimeState.JobVersion || shapeVersion > realTimeState.ShapeVersion)
+                    if (jobVersion > _realTimeState.JobVersion || shapeVersion > _realTimeState.ShapeVersion)
                     {
                         // reset real time state
-                        realTimeState = new RealTimeState();
-                        realTimeState.JobVersion = jobVersion;
-                        realTimeState.ShapeVersion = shapeVersion;
+                        _realTimeState = new RealTimeState();
+                        _realTimeState.JobVersion = jobVersion;
+                        _realTimeState.ShapeVersion = shapeVersion;
 
                         // delete existing collection
                         realtimeRecordsCollection.DeleteAll();
@@ -92,9 +106,9 @@ namespace PluginSalesforceSandbox.API.Read
                     var query = schema.Query;
 
                     // update real time state
-                    realTimeState.LastReadTime = DateTime.UtcNow;
+                    _realTimeState.LastReadTime = DateTime.UtcNow;
 
-                    await Initialize(client, schema, query, runId, realTimeState, schemaKeys, recordsCount,
+                    await Initialize(schema, query, runId, schemaKeys, recordsCount,
                         realtimeRecordsCollection, responseStream);
 
                     Logger.Info("Real time read initialized.");
@@ -105,8 +119,8 @@ namespace PluginSalesforceSandbox.API.Read
                         long currentRunRecordsCount = 0;
 
                         // process all messages since last batch interval
-                        Logger.Debug($"Getting all records since {realTimeState.LastReadTime.ToUniversalTime():O}");
-                        var messages = conn.GetCurrentMessages();
+                        Logger.Debug($"Getting all records since {_realTimeState.LastReadTime.ToUniversalTime():O}");
+                        var messages = _conn.GetCurrentMessages();
 
                         await foreach (var message in messages)
                         {
@@ -153,7 +167,7 @@ namespace PluginSalesforceSandbox.API.Read
                                 case "GAP_UNDELETE":
                                     // perform full init for GAP events
                                     runId = Guid.NewGuid().ToString();
-                                    await Initialize(client, schema, query, runId, realTimeState, schemaKeys, recordsCount,
+                                    await Initialize(schema, query, runId, schemaKeys, recordsCount,
                                         realtimeRecordsCollection, responseStream);
                                     break;
                                 default:
@@ -181,30 +195,39 @@ namespace PluginSalesforceSandbox.API.Read
                         }
 
                         // clear processed messages
-                        conn.ClearStoredMessages();
+                        _conn.ClearStoredMessages();
 
                         // update last read time
-                        realTimeState.LastReadTime = DateTime.Now;
+                        _realTimeState.LastReadTime = DateTime.Now;
 
                         // update real time state
                         var realTimeStateCommit = new Record
                         {
                             Action = Record.Types.Action.RealTimeStateCommit,
-                            RealTimeStateJson = JsonConvert.SerializeObject(realTimeState)
+                            RealTimeStateJson = JsonConvert.SerializeObject(_realTimeState)
                         };
                         await responseStream.WriteAsync(realTimeStateCommit);
 
                         Logger.Debug(
-                            $"Got {currentRunRecordsCount} records since {realTimeState.LastReadTime.ToUniversalTime():O}");
+                            $"Got {currentRunRecordsCount} records since {_realTimeState.LastReadTime.ToUniversalTime():O}");
 
-                        await Task.Delay(realTimeSettings.BatchWindowSeconds * 1000, context.CancellationToken);
+                        if (_cts.IsCancellationRequested) {
+                            // reconnect after 30 minutes
+                            Logger.Debug("request to disconnect stream requested");
+                            _conn.Disconnect();
+
+                            GetConnectedPushTopicConnection();
+                        }
+
+                        // sleep until next check window
+                        await Task.Delay(_realTimeSettings.BatchWindowSeconds * 1000, context.CancellationToken);
                     }
                 }
             }
             catch (TaskCanceledException e)
             {
                 Logger.Info($"Operation cancelled {e.Message}");
-                conn.Disconnect();
+                _conn.Disconnect();
                 return recordsCount;
             }
             catch (Exception e)
@@ -214,10 +237,20 @@ namespace PluginSalesforceSandbox.API.Read
             }
             finally
             {
-                conn.Disconnect();
+                _conn.Disconnect();
             }
 
             return recordsCount;
+        }
+
+        private static void GetConnectedPushTopicConnection() {
+            // build cometd client
+            _conn = _connectionFactory.GetPushTopicConnection(_requestHelper, @"/topic/" + _realTimeSettings.ChannelName);
+            _conn.Connect();
+
+            // force the client to reconnect after 30 minutes
+            _cts = new CancellationTokenSource();
+            _cts.CancelAfter(1800 * 1000);
         }
 
         private static string GetRecordKeyEntry(List<string> schemaKeys, Dictionary<string, object> recordMap)
@@ -351,17 +384,15 @@ namespace PluginSalesforceSandbox.API.Read
         /// <summary>
         /// Loads all data into the local db, uploads changed records, and deletes missing records
         /// </summary>
-        /// <param name="client"></param>
         /// <param name="schema"></param>
         /// <param name="query"></param>
         /// <param name="runId"></param>
-        /// <param name="realTimeState"></param>
         /// <param name="schemaKeys"></param>
         /// <param name="recordsCount"></param>
         /// <param name="realtimeRecordsCollection"></param>
         /// <param name="responseStream"></param>
-        public static async Task Initialize(RequestHelper client, Schema schema, string query, string runId,
-            RealTimeState realTimeState, List<string> schemaKeys, long recordsCount,
+        public static async Task Initialize(Schema schema, string query, string runId,
+            List<string> schemaKeys, long recordsCount,
             ILiteCollection<RealTimeRecord> realtimeRecordsCollection, IServerStreamWriter<Record> responseStream)
         {
             IAsyncEnumerable<Dictionary<string, object>> allRecords;
@@ -369,11 +400,11 @@ namespace PluginSalesforceSandbox.API.Read
             // get all records
             if (string.IsNullOrWhiteSpace(query))
             {
-                allRecords = GetRecordsForDefaultQuery(client, schema);
+                allRecords = GetRecordsForDefaultQuery(_requestHelper, schema);
             }
             else
             {
-                allRecords = GetRecordsForQuery(client, query);
+                allRecords = GetRecordsForQuery(_requestHelper, query);
             }
 
             await foreach (var rawRecord in allRecords)
@@ -420,7 +451,7 @@ namespace PluginSalesforceSandbox.API.Read
             var realTimeStateCommit = new Record
             {
                 Action = Record.Types.Action.RealTimeStateCommit,
-                RealTimeStateJson = JsonConvert.SerializeObject(realTimeState)
+                RealTimeStateJson = JsonConvert.SerializeObject(_realTimeState)
             };
 
             await responseStream.WriteAsync(realTimeStateCommit);

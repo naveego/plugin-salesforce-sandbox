@@ -13,7 +13,7 @@ namespace PluginSalesforceSandbox.API.Utility
         {
             var convertedJson = message.Json;
             _messages.Add(convertedJson);
-            Logger.Info($"Got message: {convertedJson}");
+            Logger.Debug($"Got message: {convertedJson}");
         }
 
         public void ClearStoredMessages()
