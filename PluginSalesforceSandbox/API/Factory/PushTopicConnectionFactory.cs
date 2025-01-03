@@ -2,10 +2,8 @@
 using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.Net;
-using System.Threading.Tasks;
 using CometD.NetCore.Client;
 using CometD.NetCore.Client.Transport;
-using PluginSalesforceSandbox.API.Utility;
 using PluginSalesforceSandbox.Helper;
 
 namespace PluginSalesforceSandbox.API.Factory
@@ -14,7 +12,6 @@ namespace PluginSalesforceSandbox.API.Factory
     {
         public PushTopicConnection GetPushTopicConnection(RequestHelper requestHelper, string channel)
         {
-            ServicePointManager.SecurityProtocol = SecurityProtocolType.Tls12;
             PushTopicConnection pushTopicConnection = null;
 
             var accessToken = requestHelper.GetToken();
@@ -22,7 +19,7 @@ namespace PluginSalesforceSandbox.API.Factory
             
             try
             {
-                ServicePointManager.SecurityProtocol = SecurityProtocolType.Tls12;
+                ServicePointManager.SecurityProtocol = SecurityProtocolType.Tls13;
                 var readTimeOut = 120000;
                 var streamingEndpointURI = "/cometd/52.0";
                 var options = new Dictionary<string, object>
