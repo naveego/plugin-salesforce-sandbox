@@ -8,6 +8,7 @@ namespace PluginSalesforceSandbox.Helper
         public string ClientSecret { get; set; }
         public string RefreshToken { get; set; }
         public string InstanceUrl { get; set; }
+        public string TlsVersion { get; set; }
 
         /// <summary>
         /// Validates the settings input object
@@ -34,6 +35,16 @@ namespace PluginSalesforceSandbox.Helper
             {
                 throw new Exception("the InstanceUrl property must be set");
             }
+
+            if (string.IsNullOrEmpty(TlsVersion))
+            {
+                throw new Exception("the TlsVersion property must be set");
+            }
         }
+    }
+
+    public class ConnectSettings
+    {
+        public string TlsVersion { get; set; }
     }
 }

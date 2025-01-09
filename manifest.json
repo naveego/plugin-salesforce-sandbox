@@ -4,7 +4,7 @@
   "description": "Publisher which pulls data from a Salesforce sandbox instance",
   "apiVersion": "2",
   "versionDescription": "Version 1",
-  "version": "1.2.1",
+  "version": "1.6.9",
   "iconFile": "icon.png",
   "executable": "PluginSalesforceSandbox",
   "kind": "publisher",
@@ -30,8 +30,27 @@
   },
   "configSchema": {
     "ui": {
+      "ui:order": [
+        "TlsVersion"
+      ]
     },
     "schema": {
+      "type": "object",
+      "properties": {
+        "TlsVersion": {
+          "type": "string",
+          "title": "TLS Version",
+          "description": "Which TLS version to use in the plugin",
+          "default": "TLS 1.2",
+          "enum": [
+            "TLS 1.2",
+            "TLS 1.3"
+          ]
+        }
+      },
+      "required": [
+        "TlsVersion"
+      ]
     }
   }
 }
