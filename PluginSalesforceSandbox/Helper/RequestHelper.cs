@@ -3,7 +3,6 @@ using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Threading.Tasks;
 using Naveego.Sdk.Logging;
-using PluginSalesforceSandbox.API.Utility;
 
 namespace PluginSalesforceSandbox.Helper
 {
@@ -233,6 +232,11 @@ namespace PluginSalesforceSandbox.Helper
         public string GetInstanceUrl()
         {
             return _instanceUrl;
+        }
+
+        public string GetTlsVersion()
+        {
+            return _settings.TlsVersion;
         }
     }
 }

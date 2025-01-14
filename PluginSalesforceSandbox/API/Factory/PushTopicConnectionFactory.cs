@@ -2,10 +2,8 @@
 using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.Net;
-using System.Threading.Tasks;
 using CometD.NetCore.Client;
 using CometD.NetCore.Client.Transport;
-using PluginSalesforceSandbox.API.Utility;
 using PluginSalesforceSandbox.Helper;
 
 namespace PluginSalesforceSandbox.API.Factory
@@ -14,7 +12,6 @@ namespace PluginSalesforceSandbox.API.Factory
     {
         public PushTopicConnection GetPushTopicConnection(RequestHelper requestHelper, string channel)
         {
-            ServicePointManager.SecurityProtocol = SecurityProtocolType.Tls12;
             PushTopicConnection pushTopicConnection = null;
 
             var accessToken = requestHelper.GetToken();
@@ -22,7 +19,19 @@ namespace PluginSalesforceSandbox.API.Factory
             
             try
             {
-                ServicePointManager.SecurityProtocol = SecurityProtocolType.Tls12;
+                switch (requestHelper.GetTlsVersion())
+                {
+                    case "TLS 1.2":
+                        ServicePointManager.SecurityProtocol = SecurityProtocolType.Tls12;
+                        break;
+                    case "TLS 1.3":
+                        ServicePointManager.SecurityProtocol = SecurityProtocolType.Tls13;
+                        break;
+                    default:
+                        ServicePointManager.SecurityProtocol = SecurityProtocolType.Tls12;
+                        break;
+                }
+
                 var readTimeOut = 120000;
                 var streamingEndpointURI = "/cometd/52.0";
                 var options = new Dictionary<string, object>
@@ -33,10 +42,10 @@ namespace PluginSalesforceSandbox.API.Factory
                 {
                     {HttpRequestHeader.Authorization.ToString(), "Bearer " + accessToken}
                 };
-                var transport = new LongPollingTransport(options, new NameValueCollection {collection});
+                var transport = new LongPollingTransport(options, new NameValueCollection { collection });
                 var serverUri = new Uri(instanceUrl);
                 var endpoint = $"{serverUri.Scheme}://{serverUri.Host}{streamingEndpointURI}";
-                var bayeuxClient = new BayeuxClient(endpoint, new[] {transport});
+                var bayeuxClient = new BayeuxClient(endpoint, new[] { transport });
 
                 pushTopicConnection = new PushTopicConnection(bayeuxClient, channel);
             }
@@ -49,7 +58,7 @@ namespace PluginSalesforceSandbox.API.Factory
             {
                 throw new Exception("Error creating push topic connection");
             }
-            
+
             return pushTopicConnection;
         }
     }

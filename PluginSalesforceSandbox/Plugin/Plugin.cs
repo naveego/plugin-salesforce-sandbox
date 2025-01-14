@@ -3,25 +3,21 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Net;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using System.Web;
-using Google.Protobuf.WellKnownTypes;
 using Grpc.Core;
 using Naveego.Sdk.Logging;
 using Naveego.Sdk.Plugins;
 using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
 using PluginSalesforceSandbox.API.Discover;
 using PluginSalesforceSandbox.API.Read;
 using PluginSalesforceSandbox.DataContracts;
 using PluginSalesforceSandbox.Helper;
 using PluginSalesforceSandbox.API.Factory;
-using PluginSalesforceSandbox.API.Utility;
 
 
 namespace PluginSalesforceSandbox.Plugin
@@ -222,15 +218,17 @@ namespace PluginSalesforceSandbox.Plugin
 
             Logger.Info("Connecting...");
             Logger.Info(JsonConvert.SerializeObject(request, Formatting.Indented));
-//            Logger.Info("Got OAuth State: " + request.OauthStateJson);
-//            Logger.Info("Got OAuthConfig " + JsonConvert.SerializeObject(request.OauthConfiguration));
+            //Logger.Info("Got OAuth State: " + request.OauthStateJson);
+            //Logger.Info("Got OAuthConfig " + JsonConvert.SerializeObject(request.OauthConfiguration));
 
             OAuthState oAuthState;
             OAuthConfig oAuthConfig;
+            ConnectSettings connectSettings;
             try
             {
                 oAuthState = JsonConvert.DeserializeObject<OAuthState>(request.OauthStateJson);
                 oAuthConfig = JsonConvert.DeserializeObject<OAuthConfig>(oAuthState.Config);
+                connectSettings = JsonConvert.DeserializeObject<ConnectSettings>(request.SettingsJson);
             }
             catch (Exception e)
             {
@@ -252,7 +250,8 @@ namespace PluginSalesforceSandbox.Plugin
                     ClientId = request.OauthConfiguration.ClientId,
                     ClientSecret = request.OauthConfiguration.ClientSecret,
                     RefreshToken = oAuthState.RefreshToken,
-                    InstanceUrl = oAuthConfig.InstanceUrl
+                    InstanceUrl = oAuthConfig.InstanceUrl,
+                    TlsVersion = connectSettings.TlsVersion
                 };
             }
             else
