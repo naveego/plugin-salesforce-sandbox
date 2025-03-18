@@ -10,11 +10,10 @@ using LiteDB;
 using Naveego.Sdk.Logging;
 using Naveego.Sdk.Plugins;
 using Newtonsoft.Json;
-using PluginSalesforceSandbox.DataContracts;
 using PluginSalesforceSandbox.API.Factory;
-using PluginSalesforceSandbox.API.Utility;
 using PluginSalesforceSandbox.DataContracts;
 using PluginSalesforceSandbox.Helper;
+using Salesforce.PubSubApi;
 
 namespace PluginSalesforceSandbox.API.Read
 {
@@ -24,13 +23,16 @@ namespace PluginSalesforceSandbox.API.Read
         private const string CollectionName = "realtimerecord";
 
         // connection client settings
-        private static IPushTopicConnectionFactory _connectionFactory;
+        private static ISalesforcePubSubClientFactory _connectionFactory;
         private static RealTimeSettings _realTimeSettings;
         private static RequestHelper _requestHelper;
 
         // connection client
         private static CancellationTokenSource _cts;
-        private static PushTopicConnection _conn;
+        private static Task _subscribeTask;
+        private static SalesforcePubSubClient _client;
+        private static SchemaInfo _schemaInfo;
+        private static TopicInfo _topicInfo;
 
         // state
         private static RealTimeState _realTimeState;
@@ -45,7 +47,7 @@ namespace PluginSalesforceSandbox.API.Read
 
         public static async Task<int> ReadRecordsRealTimeAsync(RequestHelper requestHelper, ReadRequest request,
             IServerStreamWriter<Record> responseStream,
-            ServerCallContext context, string permanentPath, IPushTopicConnectionFactory connectionFactory)
+            ServerCallContext context, string permanentPath, ISalesforcePubSubClientFactory connectionFactory)
         {
             Logger.Info("Beginning to read records real time...");
 
@@ -66,7 +68,7 @@ namespace PluginSalesforceSandbox.API.Read
             _requestHelper = requestHelper;
             _connectionFactory = connectionFactory;
 
-            GetConnectedPushTopicConnection();
+            SubscribeSalesforcePubSubClient();
 
             try
             {
@@ -79,7 +81,7 @@ namespace PluginSalesforceSandbox.API.Read
                 using (var db = new LiteDatabase(Path.Join(path, $"{jobId}_RealTimeReadRecords.db")))
                 {
                     var realtimeRecordsCollection = db.GetCollection<RealTimeRecord>(CollectionName);
-                    
+
                     // a full init needs to happen
                     if (jobVersion > _realTimeState.JobVersion || shapeVersion > _realTimeState.ShapeVersion)
                     {
@@ -112,7 +114,7 @@ namespace PluginSalesforceSandbox.API.Read
                         realtimeRecordsCollection, responseStream);
 
                     Logger.Info("Real time read initialized.");
-                    
+
                     // run job until cancelled
                     while (!context.CancellationToken.IsCancellationRequested)
                     {
@@ -120,82 +122,86 @@ namespace PluginSalesforceSandbox.API.Read
 
                         // process all messages since last batch interval
                         Logger.Debug($"Getting all records since {_realTimeState.LastReadTime.ToUniversalTime():O}");
-                        var messages = _conn.GetCurrentMessages();
+                        var messages = _client.GetMessages();
 
-                        await foreach (var message in messages)
+                        foreach (var message in messages)
                         {
                             // publish record
-                            var realTimeEventWrapper = JsonConvert.DeserializeObject<RealTimeEventWrapper>(message);
+                            var changeDataEvent = JsonConvert.DeserializeObject<ChangeDataEvent>(message);
+                            var changeDataEventHeader = changeDataEvent.ChangeEventHeader;
                             recordsCount++;
                             currentRunRecordsCount++;
 
-                            var recordMap = new Dictionary<string, object>();
-                            var recordKeysMap = new Dictionary<string, object>();
+                            // cdc event only has partial records so get the full records from the API
+                            var allRecords = GetRecordsForQuery(_requestHelper, Utility.Utility.GetSingleRecordsQuery(changeDataEventHeader.EntityName, changeDataEventHeader.RecordIds));
 
-                            MutateRecordMap(schema, realTimeEventWrapper.Data.SObject, recordMap, recordKeysMap);
-
-                            var recordId = GetRecordKeyEntry(schemaKeys, recordMap);
-
-                            switch (realTimeEventWrapper.Data.Event.Type.ToUpper())
+                            await foreach (var rawRecord in allRecords)
                             {
-                                case "DELETED":
-                                    // handle record deletion event
-                                    Logger.Debug($"Deleting record {recordId}");
-                                    
-                                    var realtimeRecord =
-                                        realtimeRecordsCollection.FindOne(r => r.Id == recordId);
-                                    if (realtimeRecord == null)
-                                    {
-                                        Logger.Info($"Record {recordId} not found skipping delete event");
-                                        continue;
-                                    }
+                                var recordMap = new Dictionary<string, object>();
+                                var recordKeysMap = new Dictionary<string, object>();
 
-                                    realtimeRecordsCollection.DeleteMany(r =>
-                                        r.Id == recordId);
-                                    var deleteRecord = new Record
-                                    {
-                                        Action = Record.Types.Action.Delete,
-                                        DataJson = JsonConvert.SerializeObject(recordMap)
-                                    };
-                                    await responseStream.WriteAsync(deleteRecord);
-                                    recordsCount++;
-                                    break;
-                                case "GAP_OVERFLOW":
-                                case "GAP_CREATE":
-                                case "GAP_UPDATE":
-                                case "GAP_DELETE":
-                                case "GAP_UNDELETE":
-                                    // perform full init for GAP events
-                                    runId = Guid.NewGuid().ToString();
-                                    await Initialize(schema, query, runId, schemaKeys, recordsCount,
-                                        realtimeRecordsCollection, responseStream);
-                                    break;
-                                default:
-                                    // handle record upsert event
-                                    Logger.Debug($"Upserting record {recordId}");
-                                    
-                                    // build local db entry
-                                    var recordChanged = UpsertRealTimeRecord(runId, schemaKeys, recordMap, recordKeysMap,
-                                        realtimeRecordsCollection);
+                                MutateRecordMap(schema, rawRecord, recordMap, recordKeysMap);
 
-                                    if (recordChanged)
-                                    {
-                                        // Publish record
-                                        var record = new Record
+                                var recordId = GetRecordKeyEntry(schemaKeys, recordMap);
+
+                                switch (changeDataEventHeader.ChangeType.ToUpper())
+                                {
+                                    case "DELETE":
+                                        // handle record deletion event
+                                        Logger.Debug($"Deleting record {recordId}");
+
+                                        var realtimeRecord =
+                                            realtimeRecordsCollection.FindOne(r => r.Id == recordId);
+                                        if (realtimeRecord == null)
                                         {
-                                            Action = Record.Types.Action.Upsert,
+                                            Logger.Info($"Record {recordId} not found skipping delete event");
+                                            continue;
+                                        }
+
+                                        realtimeRecordsCollection.DeleteMany(r =>
+                                            r.Id == recordId);
+                                        var deleteRecord = new Record
+                                        {
+                                            Action = Record.Types.Action.Delete,
                                             DataJson = JsonConvert.SerializeObject(recordMap)
                                         };
-
-                                        await responseStream.WriteAsync(record);
+                                        await responseStream.WriteAsync(deleteRecord);
                                         recordsCount++;
-                                    }
-                                    break;
+                                        break;
+                                    case "GAP_OVERFLOW":
+                                    case "GAP_CREATE":
+                                    case "GAP_UPDATE":
+                                    case "GAP_DELETE":
+                                    case "GAP_UNDELETE":
+                                        // perform full init for GAP events
+                                        runId = Guid.NewGuid().ToString();
+                                        await Initialize(schema, query, runId, schemaKeys, recordsCount,
+                                            realtimeRecordsCollection, responseStream);
+                                        break;
+                                    default:
+                                        // handle record upsert event
+                                        Logger.Debug($"Upserting record {recordId}");
+
+                                        // build local db entry
+                                        var recordChanged = UpsertRealTimeRecord(runId, schemaKeys, recordMap, recordKeysMap,
+                                            realtimeRecordsCollection);
+
+                                        if (recordChanged)
+                                        {
+                                            // Publish record
+                                            var record = new Record
+                                            {
+                                                Action = Record.Types.Action.Upsert,
+                                                DataJson = JsonConvert.SerializeObject(recordMap)
+                                            };
+
+                                            await responseStream.WriteAsync(record);
+                                            recordsCount++;
+                                        }
+                                        break;
+                                }
                             }
                         }
-
-                        // clear processed messages
-                        _conn.ClearStoredMessages();
 
                         // update last read time
                         _realTimeState.LastReadTime = DateTime.Now;
@@ -211,12 +217,12 @@ namespace PluginSalesforceSandbox.API.Read
                         Logger.Debug(
                             $"Got {currentRunRecordsCount} records since {_realTimeState.LastReadTime.ToUniversalTime():O}");
 
-                        if (_cts.IsCancellationRequested) {
+                        if (_cts.IsCancellationRequested)
+                        {
                             // reconnect after 30 minutes
-                            Logger.Debug("request to disconnect stream requested");
-                            _conn.Disconnect();
+                            Logger.Info("request to resubscribe stream requested");
 
-                            GetConnectedPushTopicConnection();
+                            SubscribeSalesforcePubSubClient();
                         }
 
                         // sleep until next check window
@@ -227,7 +233,6 @@ namespace PluginSalesforceSandbox.API.Read
             catch (TaskCanceledException e)
             {
                 Logger.Info($"Operation cancelled {e.Message}");
-                _conn.Disconnect();
                 return recordsCount;
             }
             catch (Exception e)
@@ -237,20 +242,36 @@ namespace PluginSalesforceSandbox.API.Read
             }
             finally
             {
-                _conn.Disconnect();
+                _cts.Cancel();
             }
 
             return recordsCount;
         }
 
-        private static void GetConnectedPushTopicConnection() {
-            // build cometd client
-            _conn = _connectionFactory.GetPushTopicConnection(_requestHelper, @"/topic/" + _realTimeSettings.ChannelName);
-            _conn.Connect();
+        private static void SubscribeSalesforcePubSubClient()
+        {
+            // build pub sub api client
+            _client = _connectionFactory.GetPubSubClient(_requestHelper.GetToken(), _requestHelper.GetInstanceUrl(), _realTimeSettings.OrganizationId);
+
+            // get schema info
+            var topicName = _realTimeSettings.ChannelName;
+            if (!topicName.StartsWith("/data/"))
+            {
+                topicName = $"/data/{_realTimeSettings.ChannelName}";
+            }
+
+            _topicInfo = _client.GetTopicByName(topicName);
+            _schemaInfo = _client.GetSchemaById(_topicInfo.SchemaId);
+
+            Logger.Debug(JsonConvert.SerializeObject(_topicInfo));
+            Logger.Debug(JsonConvert.SerializeObject(_schemaInfo));
 
             // force the client to reconnect after 30 minutes
             _cts = new CancellationTokenSource();
             _cts.CancelAfter(1800 * 1000);
+
+            // subscribe to topic
+            _subscribeTask = Task.Run(async () => await _client.Subscribe(_topicInfo.TopicName, _schemaInfo.SchemaJson, _cts));
         }
 
         private static string GetRecordKeyEntry(List<string> schemaKeys, Dictionary<string, object> recordMap)
@@ -305,7 +326,7 @@ namespace PluginSalesforceSandbox.API.Read
                 Id = recordId,
                 RunId = runId,
                 RecordKeysMap = recordKeysMap,
-                RecordDataHash = recordHash
+                RecordDataHash = recordHash,
             };
 
             // get previous real time record
@@ -338,6 +359,13 @@ namespace PluginSalesforceSandbox.API.Read
                         }
                         else
                         {
+                            if (property.Id == "LastModifiedDate" && (rawRecord[property.Id] is long || rawRecord[property.Id] is int))
+                            {
+                                var epoch = new DateTime(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+                                long lastModifiedDate = (long)rawRecord[property.Id];
+                                var dateTime = epoch.AddMilliseconds(lastModifiedDate);
+                                rawRecord[property.Id] = dateTime.ToString("o");
+                            }
                             switch (property.Type)
                             {
                                 case PropertyType.String:
@@ -396,7 +424,7 @@ namespace PluginSalesforceSandbox.API.Read
             ILiteCollection<RealTimeRecord> realtimeRecordsCollection, IServerStreamWriter<Record> responseStream)
         {
             IAsyncEnumerable<Dictionary<string, object>> allRecords;
-            
+
             // get all records
             if (string.IsNullOrWhiteSpace(query))
             {

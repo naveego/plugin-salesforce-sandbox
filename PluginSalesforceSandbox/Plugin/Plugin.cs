@@ -29,12 +29,12 @@ namespace PluginSalesforceSandbox.Plugin
         private readonly ServerStatus _server;
         private TaskCompletionSource<bool> _tcs;
         private readonly ConcurrentDictionary<string, List<FieldObject>> _fieldObjectsDictionary;
-        private readonly IPushTopicConnectionFactory _pushTopicConnectionFactory;
+        private readonly ISalesforcePubSubClientFactory _salesforcePubSubClientFactory;
 
-        public Plugin(HttpClient client = null, IPushTopicConnectionFactory pushTopicConnectionFactory = null)
+        public Plugin(HttpClient client = null, ISalesforcePubSubClientFactory salesforcePubSubClientFactory = null)
         {
             _injectedClient = client ?? new HttpClient();
-            _pushTopicConnectionFactory = pushTopicConnectionFactory ?? new PushTopicConnectionFactory();
+            _salesforcePubSubClientFactory = salesforcePubSubClientFactory ?? new SalesforcePubSubClientFactory();
             _server = new ServerStatus
             {
                 Connected = false,
@@ -251,13 +251,13 @@ namespace PluginSalesforceSandbox.Plugin
                     ClientSecret = request.OauthConfiguration.ClientSecret,
                     RefreshToken = oAuthState.RefreshToken,
                     InstanceUrl = oAuthConfig.InstanceUrl,
-                    TlsVersion = connectSettings.TlsVersion
+                    TlsVersion = connectSettings.TlsVersion,
                 };
             }
             else
             {
                 var _settings = JsonConvert.DeserializeObject<Settings>(request.SettingsJson);
-                
+
                 settings = new Settings
                 {
                     ClientId = _settings.ClientId,
@@ -379,7 +379,7 @@ namespace PluginSalesforceSandbox.Plugin
             Logger.Info("Discovering Schemas...");
 
             DiscoverSchemasResponse discoverSchemasResponse = new DiscoverSchemasResponse();
-            
+
             // handle query based schema
             try
             {
@@ -470,7 +470,7 @@ namespace PluginSalesforceSandbox.Plugin
         {
             Logger.Info("Configuring real time...");
 
-            
+
             var schemaJson = Read.GetSchemaJson();
             var uiJson = Read.GetUIJson();
 
@@ -490,7 +490,7 @@ namespace PluginSalesforceSandbox.Plugin
                     }
                 });
             }
-            
+
             // if first call 
             if (string.IsNullOrWhiteSpace(request.Form.DataJson) || request.Form.DataJson == "{}")
             {
@@ -507,8 +507,40 @@ namespace PluginSalesforceSandbox.Plugin
                     }
                 });
             }
-            
-            // TODO: Enhancement - Validate if the passed in channel name is valid and covers all the properties of the schema
+
+            // Validate if the passed in channel name is valid and covers all the properties of the schema
+            try
+            {
+                var realTimeSettings = JsonConvert.DeserializeObject<RealTimeSettings>(request.Form.DataJson);
+
+                // build pub sub api client
+                var pubSubClient = _salesforcePubSubClientFactory.GetPubSubClient(_client.GetToken(), _client.GetInstanceUrl(), realTimeSettings.OrganizationId);
+
+                // get topic info
+                var topicName = realTimeSettings.ChannelName;
+                if (!topicName.StartsWith("/data/"))
+                {
+                    topicName = $"/data/{realTimeSettings.ChannelName}";
+                }
+
+                pubSubClient.GetTopicByName(topicName);
+            }
+            catch (Exception e)
+            {
+                Logger.Error(e, e.Message, context);
+                return Task.FromResult(new ConfigureRealTimeResponse
+                {
+                    Form = new ConfigurationFormResponse
+                    {
+                        DataJson = request.Form.DataJson,
+                        DataErrorsJson = "",
+                        Errors = { e.Message },
+                        SchemaJson = schemaJson,
+                        UiJson = uiJson,
+                        StateJson = request.Form.StateJson,
+                    }
+                });
+            }
 
             return Task.FromResult(new ConfigureRealTimeResponse
             {
@@ -544,11 +576,11 @@ namespace PluginSalesforceSandbox.Plugin
             try
             {
                 var recordsCount = 0;
-                
+
                 if (!string.IsNullOrWhiteSpace(request.RealTimeSettingsJson))
                 {
                     recordsCount = await Read.ReadRecordsRealTimeAsync(_client, request, responseStream,
-                        context, _server.Config.PermanentDirectory, _pushTopicConnectionFactory);
+                        context, _server.Config.PermanentDirectory, _salesforcePubSubClientFactory);
                 }
                 else
                 {
