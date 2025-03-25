@@ -41,7 +41,7 @@ namespace PluginSalesforceSandboxTest.Plugin
                 })
             };
         }
-        
+
         private Schema GetTestSchema(string endpointId = null, string id = "test", string name = "test", string query = "")
         {
             return new Schema
@@ -51,15 +51,15 @@ namespace PluginSalesforceSandboxTest.Plugin
                 Query = query
             };
         }
-        
+
         [Fact]
         public async Task ConnectSessionTest()
         {
             // setup
             Server server = new Server
             {
-                Services = {Publisher.BindService(new PluginSalesforceSandbox.Plugin.Plugin())},
-                Ports = {new ServerPort("localhost", 0, ServerCredentials.Insecure)}
+                Services = { Publisher.BindService(new PluginSalesforceSandbox.Plugin.Plugin()) },
+                Ports = { new ServerPort("localhost", 0, ServerCredentials.Insecure) }
             };
             server.Start();
 
@@ -95,8 +95,8 @@ namespace PluginSalesforceSandboxTest.Plugin
         {
             Server server = new Server
             {
-                Services = {Publisher.BindService(new PluginSalesforceSandbox.Plugin.Plugin())},
-                Ports = {new ServerPort("localhost", 0, ServerCredentials.Insecure)}
+                Services = { Publisher.BindService(new PluginSalesforceSandbox.Plugin.Plugin()) },
+                Ports = { new ServerPort("localhost", 0, ServerCredentials.Insecure) }
             };
             server.Start();
 
@@ -124,8 +124,8 @@ namespace PluginSalesforceSandboxTest.Plugin
             // setup
             Server server = new Server
             {
-                Services = {Publisher.BindService(new PluginSalesforceSandbox.Plugin.Plugin())},
-                Ports = {new ServerPort("localhost", 0, ServerCredentials.Insecure)}
+                Services = { Publisher.BindService(new PluginSalesforceSandbox.Plugin.Plugin()) },
+                Ports = { new ServerPort("localhost", 0, ServerCredentials.Insecure) }
             };
             server.Start();
 
@@ -133,7 +133,7 @@ namespace PluginSalesforceSandboxTest.Plugin
 
             var channel = new Channel($"localhost:{port}", ChannelCredentials.Insecure);
             var client = new Publisher.PublisherClient(channel);
-            
+
             var configureRequest = new ConfigureRequest
             {
                 TemporaryDirectory = "../../../Temp",
@@ -170,8 +170,8 @@ namespace PluginSalesforceSandboxTest.Plugin
             // setup
             Server server = new Server
             {
-                Services = {Publisher.BindService(new PluginSalesforceSandbox.Plugin.Plugin())},
-                Ports = {new ServerPort("localhost", 0, ServerCredentials.Insecure)}
+                Services = { Publisher.BindService(new PluginSalesforceSandbox.Plugin.Plugin()) },
+                Ports = { new ServerPort("localhost", 0, ServerCredentials.Insecure) }
             };
             server.Start();
 
@@ -185,7 +185,7 @@ namespace PluginSalesforceSandboxTest.Plugin
             var request = new DiscoverSchemasRequest
             {
                 Mode = DiscoverSchemasRequest.Types.Mode.Refresh,
-                ToRefresh = {new Schema {Id = "Account"}}
+                ToRefresh = { new Schema { Id = "Account" } }
             };
 
             // act
@@ -200,15 +200,15 @@ namespace PluginSalesforceSandboxTest.Plugin
             await channel.ShutdownAsync();
             await server.ShutdownAsync();
         }
-        
+
         [Fact]
         public async Task DiscoverSchemasQueryRefreshTest()
         {
             // setup
             Server server = new Server
             {
-                Services = {Publisher.BindService(new PluginSalesforceSandbox.Plugin.Plugin())},
-                Ports = {new ServerPort("localhost", 0, ServerCredentials.Insecure)}
+                Services = { Publisher.BindService(new PluginSalesforceSandbox.Plugin.Plugin()) },
+                Ports = { new ServerPort("localhost", 0, ServerCredentials.Insecure) }
             };
             server.Start();
 
@@ -222,7 +222,7 @@ namespace PluginSalesforceSandboxTest.Plugin
             var request = new DiscoverSchemasRequest
             {
                 Mode = DiscoverSchemasRequest.Types.Mode.Refresh,
-                ToRefresh = {new Schema {Id = "Custom", Name = "Custom", Query = "SELECT id, name from Account"}},
+                ToRefresh = { new Schema { Id = "Custom", Name = "Custom", Query = "SELECT id, name from Account" } },
                 SampleSize = 10
             };
 
@@ -245,8 +245,8 @@ namespace PluginSalesforceSandboxTest.Plugin
             // setup
             Server server = new Server
             {
-                Services = {Publisher.BindService(new PluginSalesforceSandbox.Plugin.Plugin())},
-                Ports = {new ServerPort("localhost", 0, ServerCredentials.Insecure)}
+                Services = { Publisher.BindService(new PluginSalesforceSandbox.Plugin.Plugin()) },
+                Ports = { new ServerPort("localhost", 0, ServerCredentials.Insecure) }
             };
             server.Start();
 
@@ -315,15 +315,15 @@ namespace PluginSalesforceSandboxTest.Plugin
             await channel.ShutdownAsync();
             await server.ShutdownAsync();
         }
-        
+
         [Fact]
         public async Task ReadStreamRealTimeTest()
         {
             // setup
             Server server = new Server
             {
-                Services = {Publisher.BindService(new PluginSalesforceSandbox.Plugin.Plugin())},
-                Ports = {new ServerPort("localhost", 0, ServerCredentials.Insecure)}
+                Services = { Publisher.BindService(new PluginSalesforceSandbox.Plugin.Plugin()) },
+                Ports = { new ServerPort("localhost", 0, ServerCredentials.Insecure) }
             };
             server.Start();
 
@@ -331,7 +331,7 @@ namespace PluginSalesforceSandboxTest.Plugin
 
             var channel = new Channel($"localhost:{port}", ChannelCredentials.Insecure);
             var client = new Publisher.PublisherClient(channel);
-            
+
             var configureRequest = new ConfigureRequest
             {
                 TemporaryDirectory = "../../../Temp",
@@ -340,25 +340,25 @@ namespace PluginSalesforceSandboxTest.Plugin
                 DataVersions = new DataVersions(),
                 LogLevel = LogLevel.Debug
             };
-            
+
             var schema = GetTestSchema(null, @"Contact", @"Contact");
             // var schema = GetTestSchema(null, @"Lead", @"Lead");
             // var schema = GetTestSchema(null, @"LeadUpdates", @"LeadUpdates", "Select Id, Name FROM Lead");
             // var schema = GetTestSchema(null, @"/topic/LeadUpdates", @"/topic/LeadUpdates", "Select Id, Name FROM Lead");
 
-            
+
             var connectRequest = GetConnectSettings();
 
             var schemaRequest = new DiscoverSchemasRequest
             {
                 Mode = DiscoverSchemasRequest.Types.Mode.Refresh,
-                ToRefresh = {schema}
+                ToRefresh = { schema }
             };
 
             var realTimeSettings = new RealTimeSettings
             {
-                ChannelName = "Contacts_IdName",
-                // ChannelName = "LeadsAll",
+                ChannelName = "ContactChangeEvent",
+                OrganizationId = "00D1U000000qdO6",
                 BatchWindowSeconds = 5
             };
 
@@ -373,7 +373,7 @@ namespace PluginSalesforceSandboxTest.Plugin
                 RealTimeStateJson = JsonConvert.SerializeObject(new RealTimeState()),
                 RealTimeSettingsJson = JsonConvert.SerializeObject(realTimeSettings),
             };
-            
+
             // act
             var records = new List<Record>();
             try
@@ -384,10 +384,10 @@ namespace PluginSalesforceSandboxTest.Plugin
                 request.Schema = schemasResponse.Schemas[0];
 
                 var cancellationToken = new CancellationTokenSource();
-                cancellationToken.CancelAfter(10000*10000);
+                cancellationToken.CancelAfter(10000 * 10000);
                 var response = client.ReadStream(request, null, null, cancellationToken.Token);
                 var responseStream = response.ResponseStream;
-                
+
                 while (await responseStream.MoveNext())
                 {
                     records.Add(responseStream.Current);
@@ -409,15 +409,15 @@ namespace PluginSalesforceSandboxTest.Plugin
             await channel.ShutdownAsync();
             await server.ShutdownAsync();
         }
-        
+
         [Fact]
         public async Task ReadStreamQueryTest()
         {
             // setup
             Server server = new Server
             {
-                Services = {Publisher.BindService(new PluginSalesforceSandbox.Plugin.Plugin())},
-                Ports = {new ServerPort("localhost", 0, ServerCredentials.Insecure)}
+                Services = { Publisher.BindService(new PluginSalesforceSandbox.Plugin.Plugin()) },
+                Ports = { new ServerPort("localhost", 0, ServerCredentials.Insecure) }
             };
             server.Start();
 
@@ -427,11 +427,11 @@ namespace PluginSalesforceSandboxTest.Plugin
             var client = new Publisher.PublisherClient(channel);
 
             var connectRequest = GetConnectSettings();
-            
+
             var discoverRequest = new DiscoverSchemasRequest
             {
                 Mode = DiscoverSchemasRequest.Types.Mode.Refresh,
-                ToRefresh = {new Schema {Id = "Custom", Name = "Custom", Query = "SELECT Id, Name, Industry, LastModifiedDate, (SELECT Id, Name FROM Contacts) FROM Account WHEE Industry in ('Biotechnology', 'Energy')"}}
+                ToRefresh = { new Schema { Id = "Custom", Name = "Custom", Query = "SELECT Id, Name, Industry, LastModifiedDate, (SELECT Id, Name FROM Contacts) FROM Account WHEE Industry in ('Biotechnology', 'Energy')" } }
             };
 
             // act
@@ -466,8 +466,8 @@ namespace PluginSalesforceSandboxTest.Plugin
             // setup
             Server server = new Server
             {
-                Services = {Publisher.BindService(new PluginSalesforceSandbox.Plugin.Plugin())},
-                Ports = {new ServerPort("localhost", 0, ServerCredentials.Insecure)}
+                Services = { Publisher.BindService(new PluginSalesforceSandbox.Plugin.Plugin()) },
+                Ports = { new ServerPort("localhost", 0, ServerCredentials.Insecure) }
             };
             server.Start();
 
@@ -532,8 +532,8 @@ namespace PluginSalesforceSandboxTest.Plugin
             // setup
             Server server = new Server
             {
-                Services = {Publisher.BindService(new PluginSalesforceSandbox.Plugin.Plugin())},
-                Ports = {new ServerPort("localhost", 0, ServerCredentials.Insecure)}
+                Services = { Publisher.BindService(new PluginSalesforceSandbox.Plugin.Plugin()) },
+                Ports = { new ServerPort("localhost", 0, ServerCredentials.Insecure) }
             };
             server.Start();
 
@@ -591,8 +591,8 @@ namespace PluginSalesforceSandboxTest.Plugin
             // setup
             Server server = new Server
             {
-                Services = {Publisher.BindService(new PluginSalesforceSandbox.Plugin.Plugin())},
-                Ports = {new ServerPort("localhost", 0, ServerCredentials.Insecure)}
+                Services = { Publisher.BindService(new PluginSalesforceSandbox.Plugin.Plugin()) },
+                Ports = { new ServerPort("localhost", 0, ServerCredentials.Insecure) }
             };
             server.Start();
 
@@ -602,11 +602,11 @@ namespace PluginSalesforceSandboxTest.Plugin
             var client = new Publisher.PublisherClient(channel);
 
             var connectRequest = GetConnectSettings();
-            
+
             var discoverSchemasRequest = new DiscoverSchemasRequest
             {
                 Mode = DiscoverSchemasRequest.Types.Mode.Refresh,
-                ToRefresh = {new Schema {Id = "Account"}}
+                ToRefresh = { new Schema { Id = "Account" } }
             };
 
             var prepareRequest = new PrepareWriteRequest()
@@ -693,8 +693,8 @@ namespace PluginSalesforceSandboxTest.Plugin
             // setup
             Server server = new Server
             {
-                Services = {Publisher.BindService(new PluginSalesforceSandbox.Plugin.Plugin())},
-                Ports = {new ServerPort("localhost", 0, ServerCredentials.Insecure)}
+                Services = { Publisher.BindService(new PluginSalesforceSandbox.Plugin.Plugin()) },
+                Ports = { new ServerPort("localhost", 0, ServerCredentials.Insecure) }
             };
             server.Start();
 

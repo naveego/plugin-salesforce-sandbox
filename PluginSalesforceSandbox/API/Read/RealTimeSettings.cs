@@ -4,5 +4,6 @@ namespace PluginSalesforceSandbox.API.Read
     {
         public string ChannelName { get; set; }
         public int BatchWindowSeconds { get; set; } = 5;
+        public string OrganizationId { get; set; }
     }
 }

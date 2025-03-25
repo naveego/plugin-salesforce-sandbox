@@ -25,16 +25,23 @@ namespace PluginSalesforceSandbox.API.Read
                     {
                         {"type", "string"},
                         {"title", "Channel Name"},
-                        {"description", "Enter the name of the channel in Salesforce. The channel must contain the \"id\" column and the \"id\" property must be the only key property in the input. To create or find an existing channel, please refer to this documentation: https://docs.augr.aunsight.com/plugins/plugin-salesforce-realtime"}
+                        {"description", "Enter the name of the channel in Salesforce. To create or find an existing channel, please refer to this documentation: https://developer.salesforce.com/docs/atlas.en-us.change_data_capture.meta/change_data_capture/cdc_subscribe_channels.htm"}
+                    }},
+                    {"OrganizationId", new Dictionary<string, object>
+                    {
+                        {"type", "string"},
+                        {"title", "Organization ID"},
+                        {"description", "Enter the ID of the Organization in Salesforce. To find the Organiztion ID, please refer to this documentation: https://help.salesforce.com/s/articleView?id=000385215&type=1"}
                     }}
                 }},
                 {"required", new []
                 {
                     "BatchWindowSeconds",
-                    "ChannelName"
+                    "ChannelName",
+                    "OrganizationId"
                 }}
             };
-            
+
             return JsonConvert.SerializeObject(schemaJsonObj);
         }
     }
