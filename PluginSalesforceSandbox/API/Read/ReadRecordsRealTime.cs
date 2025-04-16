@@ -133,7 +133,7 @@ namespace PluginSalesforceSandbox.API.Read
                             currentRunRecordsCount++;
 
                             // cdc event only has partial records so get the full records from the API
-                            var allRecords = GetRecordsForQuery(_requestHelper, Utility.Utility.GetSingleRecordsQuery(changeDataEventHeader.EntityName, changeDataEventHeader.RecordIds));
+                            var allRecords = GetAllRecordsForQuery(_requestHelper, Utility.Utility.GetSingleRecordsQuery(changeDataEventHeader.EntityName, changeDataEventHeader.RecordIds));
 
                             await foreach (var rawRecord in allRecords)
                             {
