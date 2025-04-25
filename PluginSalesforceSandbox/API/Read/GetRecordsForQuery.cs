@@ -22,7 +22,7 @@ namespace PluginSalesforceSandbox.API.Read
             var recordCount = 0;
 
             var query = Utility.Utility.GetDefaultQuery(schema);
-                
+
             do
             {
                 loopCount++;
@@ -46,7 +46,7 @@ namespace PluginSalesforceSandbox.API.Read
                 query = Utility.Utility.GetDefaultQuery(schema, loopCount);
             } while (lastId != previousLastId && recordCount % 200 == 0);
         }
-        
+
         public static async IAsyncEnumerable<Dictionary<string, object>> GetRecordsForQuery(RequestHelper client, string query)
         {
             // get records
@@ -60,7 +60,7 @@ namespace PluginSalesforceSandbox.API.Read
                 var errorBody = await response.Content.ReadAsStringAsync();
                 throw new Exception(errorBody);
             }
-            
+
             var recordsResponse =
                 JsonConvert.DeserializeObject<RecordsResponse>(await response.Content.ReadAsStringAsync());
 
@@ -75,12 +75,53 @@ namespace PluginSalesforceSandbox.API.Read
             {
                 response = await client.GetAsync(recordsResponse.NextRecordsUrl.Replace("/services/data/v52.0", ""));
                 response.EnsureSuccessStatusCode();
-                
+
                 recordsResponse =
                     JsonConvert.DeserializeObject<RecordsResponse>(await response.Content.ReadAsStringAsync());
 
                 records = recordsResponse.Records;
-                
+
+                foreach (var record in records)
+                {
+                    yield return record;
+                }
+            }
+        }
+
+        public static async IAsyncEnumerable<Dictionary<string, object>> GetAllRecordsForQuery(RequestHelper client, string query)
+        {
+            // get records
+            var response = await client.GetAsync($"/queryAll?q={HttpUtility.UrlEncode(query)}");
+            try
+            {
+                response.EnsureSuccessStatusCode();
+            }
+            catch (Exception e)
+            {
+                var errorBody = await response.Content.ReadAsStringAsync();
+                throw new Exception(errorBody);
+            }
+
+            var recordsResponse =
+                JsonConvert.DeserializeObject<RecordsResponse>(await response.Content.ReadAsStringAsync());
+
+            var records = recordsResponse.Records;
+
+            foreach (var record in records)
+            {
+                yield return record;
+            }
+
+            while (!recordsResponse.Done)
+            {
+                response = await client.GetAsync(recordsResponse.NextRecordsUrl.Replace("/services/data/v52.0", ""));
+                response.EnsureSuccessStatusCode();
+
+                recordsResponse =
+                    JsonConvert.DeserializeObject<RecordsResponse>(await response.Content.ReadAsStringAsync());
+
+                records = recordsResponse.Records;
+
                 foreach (var record in records)
                 {
                     yield return record;

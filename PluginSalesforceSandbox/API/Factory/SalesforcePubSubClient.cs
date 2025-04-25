@@ -13,7 +13,7 @@ public class SalesforcePubSubClient
 {
   private readonly PubSub.PubSubClient _client;
   private readonly Metadata _metadata;
-  private readonly ConcurrentBag<string> _messages = new ConcurrentBag<string>();
+  private readonly ConcurrentQueue<string> _messages = new ConcurrentQueue<string>();
 
   public SalesforcePubSubClient(string address, Metadata metadata)
   {
@@ -106,7 +106,7 @@ public class SalesforcePubSubClient
           string jsonPayload = AvroConvert.Avro2Json(bytePayload, jsonSchema);
           Logger.Debug($"response: {jsonPayload}");
 
-          _messages.Add(jsonPayload);
+          _messages.Enqueue(jsonPayload);
         }
       }
       else
