@@ -13,9 +13,9 @@ namespace PluginSalesforceSandbox.API.Factory
             try
             {
                 var metadata = new Metadata{
-                    {"accesstoken", accessToken},
-                    { "instanceurl", instanceUrl},
-                    { "tenantid", organizationId}
+                    { "accesstoken", accessToken },
+                    { "instanceurl", instanceUrl },
+                    { "tenantid", organizationId }
                 };
 
                 salesforcePubSubClient = new SalesforcePubSubClient("https://api.pubsub.salesforce.com:7443", metadata);

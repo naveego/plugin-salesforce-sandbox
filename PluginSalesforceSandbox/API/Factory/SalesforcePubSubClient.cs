@@ -58,7 +58,7 @@ public class SalesforcePubSubClient
       {
         TopicName = topicName,
         ReplayPreset = ReplayPreset.Latest,
-        NumRequested = 10
+        NumRequested = 100000,
       };
 
       await WriteToStream(stream.RequestStream, fetchRequest);
