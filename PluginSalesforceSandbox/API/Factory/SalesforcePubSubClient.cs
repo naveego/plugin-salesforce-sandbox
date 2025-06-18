@@ -65,7 +65,7 @@ public class SalesforcePubSubClient
         TopicName = topicName,
         ReplayId = _replayId,
         ReplayPreset = Equals(ByteString.Empty, _replayId) ? ReplayPreset.Latest : ReplayPreset.Custom,
-        NumRequested = 100
+        NumRequested = MAX_MESSAGES
       };
 
       await WriteToStream(_stream.RequestStream, fetchRequest);
