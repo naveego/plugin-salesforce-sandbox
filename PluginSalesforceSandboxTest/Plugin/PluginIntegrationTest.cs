@@ -13,256 +13,260 @@ using PluginSalesforceSandbox.API.Read;
 using RichardSzalay.MockHttp;
 using Xunit;
 using Record = Naveego.Sdk.Plugins.Record;
+using PluginSalesforceSandbox.Helper;
 
 
 namespace PluginSalesforceSandboxTest.Plugin
 {
-    public class PluginIntegrationTest
+  public class PluginIntegrationTest
+  {
+    private ConnectRequest GetConnectSettings()
     {
-        private ConnectRequest GetConnectSettings()
+      return new ConnectRequest
+      {
+        SettingsJson = JsonConvert.SerializeObject(new Settings
         {
-            return new ConnectRequest
-            {
-                SettingsJson = "",
-                OauthConfiguration = new OAuthConfiguration
-                {
-                    ClientId = "",
-                    ClientSecret = "",
-                    ConfigurationJson = "{}"
-                },
-                OauthStateJson = JsonConvert.SerializeObject(new OAuthState
-                {
-                    AuthToken = "",
-                    RefreshToken = "",
-                    Config = JsonConvert.SerializeObject(new OAuthConfig
-                    {
-                        InstanceUrl = ""
-                    })
-                })
-            };
-        }
-
-        private Schema GetTestSchema(string endpointId = null, string id = "test", string name = "test", string query = "")
+          TlsVersion = "TLS 1.2",
+        }),
+        OauthConfiguration = new OAuthConfiguration
         {
-            return new Schema
-            {
-                Id = id,
-                Name = name,
-                Query = query
-            };
-        }
-
-        [Fact]
-        public async Task ConnectSessionTest()
+          ClientId = "",
+          ClientSecret = "",
+          ConfigurationJson = "{}"
+        },
+        OauthStateJson = JsonConvert.SerializeObject(new OAuthState
         {
-            // setup
-            Server server = new Server
-            {
-                Services = { Publisher.BindService(new PluginSalesforceSandbox.Plugin.Plugin()) },
-                Ports = { new ServerPort("localhost", 0, ServerCredentials.Insecure) }
-            };
-            server.Start();
+          AuthToken = "",
+          RefreshToken = "",
+          Config = JsonConvert.SerializeObject(new OAuthConfig
+          {
+            InstanceUrl = ""
+          })
+        })
+      };
+    }
 
-            var port = server.Ports.First().BoundPort;
+    private Schema GetTestSchema(string endpointId = null, string id = "test", string name = "test", string query = "")
+    {
+      return new Schema
+      {
+        Id = id,
+        Name = name,
+        Query = query
+      };
+    }
 
-            var channel = new Channel($"localhost:{port}", ChannelCredentials.Insecure);
-            var client = new Publisher.PublisherClient(channel);
+    [Fact]
+    public async Task ConnectSessionTest()
+    {
+      // setup
+      Server server = new Server
+      {
+        Services = { Publisher.BindService(new PluginSalesforceSandbox.Plugin.Plugin()) },
+        Ports = { new ServerPort("localhost", 0, ServerCredentials.Insecure) }
+      };
+      server.Start();
 
-            var request = GetConnectSettings();
-            var disconnectRequest = new DisconnectRequest();
+      var port = server.Ports.First().BoundPort;
 
-            // act
-            var response = client.ConnectSession(request);
-            var responseStream = response.ResponseStream;
-            var records = new List<ConnectResponse>();
+      var channel = new Channel($"localhost:{port}", ChannelCredentials.Insecure);
+      var client = new Publisher.PublisherClient(channel);
 
-            while (await responseStream.MoveNext())
-            {
-                records.Add(responseStream.Current);
-                client.Disconnect(disconnectRequest);
-            }
+      var request = GetConnectSettings();
+      var disconnectRequest = new DisconnectRequest();
 
-            // assert
-            Assert.Single(records);
+      // act
+      var response = client.ConnectSession(request);
+      var responseStream = response.ResponseStream;
+      var records = new List<ConnectResponse>();
 
-            // cleanup
-            await channel.ShutdownAsync();
-            await server.ShutdownAsync();
-        }
+      while (await responseStream.MoveNext())
+      {
+        records.Add(responseStream.Current);
+        client.Disconnect(disconnectRequest);
+      }
 
-        [Fact]
-        public async Task ConnectTest()
+      // assert
+      Assert.Single(records);
+
+      // cleanup
+      await channel.ShutdownAsync();
+      await server.ShutdownAsync();
+    }
+
+    [Fact]
+    public async Task ConnectTest()
+    {
+      Server server = new Server
+      {
+        Services = { Publisher.BindService(new PluginSalesforceSandbox.Plugin.Plugin()) },
+        Ports = { new ServerPort("localhost", 0, ServerCredentials.Insecure) }
+      };
+      server.Start();
+
+      var port = server.Ports.First().BoundPort;
+
+      var channel = new Channel($"localhost:{port}", ChannelCredentials.Insecure);
+      var client = new Publisher.PublisherClient(channel);
+
+      var request = GetConnectSettings();
+
+      // act
+      var response = client.Connect(request);
+
+      // assert
+      Assert.IsType<ConnectResponse>(response);
+
+      // cleanup
+      await channel.ShutdownAsync();
+      await server.ShutdownAsync();
+    }
+
+    [Fact]
+    public async Task DiscoverSchemasAllTest()
+    {
+      // setup
+      Server server = new Server
+      {
+        Services = { Publisher.BindService(new PluginSalesforceSandbox.Plugin.Plugin()) },
+        Ports = { new ServerPort("localhost", 0, ServerCredentials.Insecure) }
+      };
+      server.Start();
+
+      var port = server.Ports.First().BoundPort;
+
+      var channel = new Channel($"localhost:{port}", ChannelCredentials.Insecure);
+      var client = new Publisher.PublisherClient(channel);
+
+      var configureRequest = new ConfigureRequest
+      {
+        TemporaryDirectory = "../../../Temp",
+        PermanentDirectory = "../../../Perm",
+        LogDirectory = "../../../Logs",
+        DataVersions = new DataVersions(),
+        LogLevel = LogLevel.Debug
+      };
+
+      var connectRequest = GetConnectSettings();
+
+      var request = new DiscoverSchemasRequest
+      {
+        Mode = DiscoverSchemasRequest.Types.Mode.All,
+      };
+
+      // act
+      client.Configure(configureRequest);
+      client.Connect(connectRequest);
+      var response = client.DiscoverSchemas(request);
+
+      // assert
+      Assert.IsType<DiscoverSchemasResponse>(response);
+      Assert.Equal(2, response.Schemas.Count);
+
+      // cleanup
+      await channel.ShutdownAsync();
+      await server.ShutdownAsync();
+    }
+
+    [Fact]
+    public async Task DiscoverSchemasRefreshTest()
+    {
+      // setup
+      Server server = new Server
+      {
+        Services = { Publisher.BindService(new PluginSalesforceSandbox.Plugin.Plugin()) },
+        Ports = { new ServerPort("localhost", 0, ServerCredentials.Insecure) }
+      };
+      server.Start();
+
+      var port = server.Ports.First().BoundPort;
+
+      var channel = new Channel($"localhost:{port}", ChannelCredentials.Insecure);
+      var client = new Publisher.PublisherClient(channel);
+
+      var connectRequest = GetConnectSettings();
+
+      var request = new DiscoverSchemasRequest
+      {
+        Mode = DiscoverSchemasRequest.Types.Mode.Refresh,
+        ToRefresh = { new Schema { Id = "Account" } }
+      };
+
+      // act
+      client.Connect(connectRequest);
+      var response = client.DiscoverSchemas(request);
+
+      // assert
+      Assert.IsType<DiscoverSchemasResponse>(response);
+      Assert.Single(response.Schemas);
+
+      // cleanup
+      await channel.ShutdownAsync();
+      await server.ShutdownAsync();
+    }
+
+    [Fact]
+    public async Task DiscoverSchemasQueryRefreshTest()
+    {
+      // setup
+      Server server = new Server
+      {
+        Services = { Publisher.BindService(new PluginSalesforceSandbox.Plugin.Plugin()) },
+        Ports = { new ServerPort("localhost", 0, ServerCredentials.Insecure) }
+      };
+      server.Start();
+
+      var port = server.Ports.First().BoundPort;
+
+      var channel = new Channel($"localhost:{port}", ChannelCredentials.Insecure);
+      var client = new Publisher.PublisherClient(channel);
+
+      var connectRequest = GetConnectSettings();
+
+      var request = new DiscoverSchemasRequest
+      {
+        Mode = DiscoverSchemasRequest.Types.Mode.Refresh,
+        ToRefresh = { new Schema { Id = "Custom", Name = "Custom", Query = "SELECT id, name from Account" } },
+        SampleSize = 10
+      };
+
+      // act
+      client.Connect(connectRequest);
+      var response = client.DiscoverSchemas(request);
+
+      // assert
+      Assert.IsType<DiscoverSchemasResponse>(response);
+      Assert.Single(response.Schemas);
+
+      // cleanup
+      await channel.ShutdownAsync();
+      await server.ShutdownAsync();
+    }
+
+    [Fact]
+    public async Task ReadStreamTest()
+    {
+      // setup
+      Server server = new Server
+      {
+        Services = { Publisher.BindService(new PluginSalesforceSandbox.Plugin.Plugin()) },
+        Ports = { new ServerPort("localhost", 0, ServerCredentials.Insecure) }
+      };
+      server.Start();
+
+      var port = server.Ports.First().BoundPort;
+
+      var channel = new Channel($"localhost:{port}", ChannelCredentials.Insecure);
+      var client = new Publisher.PublisherClient(channel);
+
+      var connectRequest = GetConnectSettings();
+
+      var request = new ReadRequest()
+      {
+        Schema = new Schema
         {
-            Server server = new Server
-            {
-                Services = { Publisher.BindService(new PluginSalesforceSandbox.Plugin.Plugin()) },
-                Ports = { new ServerPort("localhost", 0, ServerCredentials.Insecure) }
-            };
-            server.Start();
-
-            var port = server.Ports.First().BoundPort;
-
-            var channel = new Channel($"localhost:{port}", ChannelCredentials.Insecure);
-            var client = new Publisher.PublisherClient(channel);
-
-            var request = GetConnectSettings();
-
-            // act
-            var response = client.Connect(request);
-
-            // assert
-            Assert.IsType<ConnectResponse>(response);
-
-            // cleanup
-            await channel.ShutdownAsync();
-            await server.ShutdownAsync();
-        }
-
-        [Fact]
-        public async Task DiscoverSchemasAllTest()
-        {
-            // setup
-            Server server = new Server
-            {
-                Services = { Publisher.BindService(new PluginSalesforceSandbox.Plugin.Plugin()) },
-                Ports = { new ServerPort("localhost", 0, ServerCredentials.Insecure) }
-            };
-            server.Start();
-
-            var port = server.Ports.First().BoundPort;
-
-            var channel = new Channel($"localhost:{port}", ChannelCredentials.Insecure);
-            var client = new Publisher.PublisherClient(channel);
-
-            var configureRequest = new ConfigureRequest
-            {
-                TemporaryDirectory = "../../../Temp",
-                PermanentDirectory = "../../../Perm",
-                LogDirectory = "../../../Logs",
-                DataVersions = new DataVersions(),
-                LogLevel = LogLevel.Debug
-            };
-
-            var connectRequest = GetConnectSettings();
-
-            var request = new DiscoverSchemasRequest
-            {
-                Mode = DiscoverSchemasRequest.Types.Mode.All,
-            };
-
-            // act
-            client.Configure(configureRequest);
-            client.Connect(connectRequest);
-            var response = client.DiscoverSchemas(request);
-
-            // assert
-            Assert.IsType<DiscoverSchemasResponse>(response);
-            Assert.Equal(2, response.Schemas.Count);
-
-            // cleanup
-            await channel.ShutdownAsync();
-            await server.ShutdownAsync();
-        }
-
-        [Fact]
-        public async Task DiscoverSchemasRefreshTest()
-        {
-            // setup
-            Server server = new Server
-            {
-                Services = { Publisher.BindService(new PluginSalesforceSandbox.Plugin.Plugin()) },
-                Ports = { new ServerPort("localhost", 0, ServerCredentials.Insecure) }
-            };
-            server.Start();
-
-            var port = server.Ports.First().BoundPort;
-
-            var channel = new Channel($"localhost:{port}", ChannelCredentials.Insecure);
-            var client = new Publisher.PublisherClient(channel);
-
-            var connectRequest = GetConnectSettings();
-
-            var request = new DiscoverSchemasRequest
-            {
-                Mode = DiscoverSchemasRequest.Types.Mode.Refresh,
-                ToRefresh = { new Schema { Id = "Account" } }
-            };
-
-            // act
-            client.Connect(connectRequest);
-            var response = client.DiscoverSchemas(request);
-
-            // assert
-            Assert.IsType<DiscoverSchemasResponse>(response);
-            Assert.Single(response.Schemas);
-
-            // cleanup
-            await channel.ShutdownAsync();
-            await server.ShutdownAsync();
-        }
-
-        [Fact]
-        public async Task DiscoverSchemasQueryRefreshTest()
-        {
-            // setup
-            Server server = new Server
-            {
-                Services = { Publisher.BindService(new PluginSalesforceSandbox.Plugin.Plugin()) },
-                Ports = { new ServerPort("localhost", 0, ServerCredentials.Insecure) }
-            };
-            server.Start();
-
-            var port = server.Ports.First().BoundPort;
-
-            var channel = new Channel($"localhost:{port}", ChannelCredentials.Insecure);
-            var client = new Publisher.PublisherClient(channel);
-
-            var connectRequest = GetConnectSettings();
-
-            var request = new DiscoverSchemasRequest
-            {
-                Mode = DiscoverSchemasRequest.Types.Mode.Refresh,
-                ToRefresh = { new Schema { Id = "Custom", Name = "Custom", Query = "SELECT id, name from Account" } },
-                SampleSize = 10
-            };
-
-            // act
-            client.Connect(connectRequest);
-            var response = client.DiscoverSchemas(request);
-
-            // assert
-            Assert.IsType<DiscoverSchemasResponse>(response);
-            Assert.Single(response.Schemas);
-
-            // cleanup
-            await channel.ShutdownAsync();
-            await server.ShutdownAsync();
-        }
-
-        [Fact]
-        public async Task ReadStreamTest()
-        {
-            // setup
-            Server server = new Server
-            {
-                Services = { Publisher.BindService(new PluginSalesforceSandbox.Plugin.Plugin()) },
-                Ports = { new ServerPort("localhost", 0, ServerCredentials.Insecure) }
-            };
-            server.Start();
-
-            var port = server.Ports.First().BoundPort;
-
-            var channel = new Channel($"localhost:{port}", ChannelCredentials.Insecure);
-            var client = new Publisher.PublisherClient(channel);
-
-            var connectRequest = GetConnectSettings();
-
-            var request = new ReadRequest()
-            {
-                Schema = new Schema
-                {
-                    Id = "Lead",
-                    Properties =
+          Id = "Lead",
+          Properties =
                     {
                         new Property
                         {
@@ -294,196 +298,197 @@ namespace PluginSalesforceSandboxTest.Plugin
                             })
                         }
                     }
-                }
-            };
-
-            // act
-            client.Connect(connectRequest);
-            var response = client.ReadStream(request);
-            var responseStream = response.ResponseStream;
-            var records = new List<Record>();
-
-            while (await responseStream.MoveNext())
-            {
-                records.Add(responseStream.Current);
-            }
-
-            // assert
-            Assert.Equal(1023, records.Count);
-
-            // cleanup
-            await channel.ShutdownAsync();
-            await server.ShutdownAsync();
         }
+      };
 
-        [Fact]
-        public async Task ReadStreamRealTimeTest()
+      // act
+      client.Connect(connectRequest);
+      var response = client.ReadStream(request);
+      var responseStream = response.ResponseStream;
+      var records = new List<Record>();
+
+      while (await responseStream.MoveNext())
+      {
+        records.Add(responseStream.Current);
+      }
+
+      // assert
+      Assert.Equal(1023, records.Count);
+
+      // cleanup
+      await channel.ShutdownAsync();
+      await server.ShutdownAsync();
+    }
+
+    [Fact]
+    public async Task ReadStreamRealTimeTest()
+    {
+      // setup
+      Server server = new Server
+      {
+        Services = { Publisher.BindService(new PluginSalesforceSandbox.Plugin.Plugin()) },
+        Ports = { new ServerPort("localhost", 0, ServerCredentials.Insecure) }
+      };
+      server.Start();
+
+      var port = server.Ports.First().BoundPort;
+
+      var channel = new Channel($"localhost:{port}", ChannelCredentials.Insecure);
+      var client = new Publisher.PublisherClient(channel);
+
+      var configureRequest = new ConfigureRequest
+      {
+        TemporaryDirectory = "../../../Temp",
+        PermanentDirectory = "../../../Perm",
+        LogDirectory = "../../../Logs",
+        DataVersions = new DataVersions(),
+        LogLevel = LogLevel.Debug
+      };
+
+      var schema = GetTestSchema(null, "Account", "Account");
+      // var schema = GetTestSchema(null, @"Lead", @"Lead");
+      // var schema = GetTestSchema(null, @"LeadUpdates", @"LeadUpdates", "Select Id, Name FROM Lead");
+      // var schema = GetTestSchema(null, @"/topic/LeadUpdates", @"/topic/LeadUpdates", "Select Id, Name FROM Lead");
+
+
+      var connectRequest = GetConnectSettings();
+
+      var schemaRequest = new DiscoverSchemasRequest
+      {
+        Mode = DiscoverSchemasRequest.Types.Mode.Refresh,
+        ToRefresh = { schema }
+      };
+
+      var realTimeSettings = new RealTimeSettings
+      {
+        ChannelName = "/data/AccountChangeEvent",
+        BaseChannelName = "",
+        OrganizationId = "",
+        BatchWindowSeconds = 5
+      };
+
+      var request = new ReadRequest()
+      {
+        DataVersions = new DataVersions
         {
-            // setup
-            Server server = new Server
-            {
-                Services = { Publisher.BindService(new PluginSalesforceSandbox.Plugin.Plugin()) },
-                Ports = { new ServerPort("localhost", 0, ServerCredentials.Insecure) }
-            };
-            server.Start();
+          JobId = "test",
+          JobDataVersion = 1
+        },
+        JobId = "test",
+        RealTimeStateJson = JsonConvert.SerializeObject(new RealTimeState()),
+        RealTimeSettingsJson = JsonConvert.SerializeObject(realTimeSettings),
+      };
 
-            var port = server.Ports.First().BoundPort;
+      // act
+      var records = new List<Record>();
+      try
+      {
+        client.Configure(configureRequest);
+        client.Connect(connectRequest);
+        var schemasResponse = client.DiscoverSchemas(schemaRequest);
+        request.Schema = schemasResponse.Schemas[0];
 
-            var channel = new Channel($"localhost:{port}", ChannelCredentials.Insecure);
-            var client = new Publisher.PublisherClient(channel);
+        var cancellationToken = new CancellationTokenSource();
+        cancellationToken.CancelAfter(10000 * 10000);
+        var response = client.ReadStream(request, null, null, cancellationToken.Token);
+        var responseStream = response.ResponseStream;
 
-            var configureRequest = new ConfigureRequest
-            {
-                TemporaryDirectory = "../../../Temp",
-                PermanentDirectory = "../../../Perm",
-                LogDirectory = "../../../Logs",
-                DataVersions = new DataVersions(),
-                LogLevel = LogLevel.Debug
-            };
-
-            var schema = GetTestSchema(null, @"Contact", @"Contact");
-            // var schema = GetTestSchema(null, @"Lead", @"Lead");
-            // var schema = GetTestSchema(null, @"LeadUpdates", @"LeadUpdates", "Select Id, Name FROM Lead");
-            // var schema = GetTestSchema(null, @"/topic/LeadUpdates", @"/topic/LeadUpdates", "Select Id, Name FROM Lead");
-
-
-            var connectRequest = GetConnectSettings();
-
-            var schemaRequest = new DiscoverSchemasRequest
-            {
-                Mode = DiscoverSchemasRequest.Types.Mode.Refresh,
-                ToRefresh = { schema }
-            };
-
-            var realTimeSettings = new RealTimeSettings
-            {
-                ChannelName = "ContactChangeEvent",
-                OrganizationId = "00D1U000000qdO6",
-                BatchWindowSeconds = 5
-            };
-
-            var request = new ReadRequest()
-            {
-                DataVersions = new DataVersions
-                {
-                    JobId = "test",
-                    JobDataVersion = 1
-                },
-                JobId = "test",
-                RealTimeStateJson = JsonConvert.SerializeObject(new RealTimeState()),
-                RealTimeSettingsJson = JsonConvert.SerializeObject(realTimeSettings),
-            };
-
-            // act
-            var records = new List<Record>();
-            try
-            {
-                client.Configure(configureRequest);
-                client.Connect(connectRequest);
-                var schemasResponse = client.DiscoverSchemas(schemaRequest);
-                request.Schema = schemasResponse.Schemas[0];
-
-                var cancellationToken = new CancellationTokenSource();
-                cancellationToken.CancelAfter(10000 * 10000);
-                var response = client.ReadStream(request, null, null, cancellationToken.Token);
-                var responseStream = response.ResponseStream;
-
-                while (await responseStream.MoveNext())
-                {
-                    records.Add(responseStream.Current);
-                }
-            }
-            catch (Exception e)
-            {
-                Assert.Contains("Status(StatusCode=\"Cancelled\", Detail=\"Cancelled\"", e.Message);
-            }
-
-
-            // assert
-            Assert.Equal(1023, records.Where(r => r.Action == Record.Types.Action.Upsert).ToList().Count);
-
-            var record = JsonConvert.DeserializeObject<Dictionary<string, object>>(records[0].DataJson);
-            // Assert.Equal("~", record["tilde"]);
-
-            // cleanup
-            await channel.ShutdownAsync();
-            await server.ShutdownAsync();
+        while (await responseStream.MoveNext())
+        {
+          records.Add(responseStream.Current);
         }
+      }
+      catch (Exception e)
+      {
+        Assert.Contains("Status(StatusCode=\"Cancelled\", Detail=\"Cancelled\"", e.Message);
+      }
 
-        [Fact]
-        public async Task ReadStreamQueryTest()
+
+      // assert
+      Assert.Equal(1023, records.Where(r => r.Action == Record.Types.Action.Upsert).ToList().Count);
+
+      var record = JsonConvert.DeserializeObject<Dictionary<string, object>>(records[0].DataJson);
+      // Assert.Equal("~", record["tilde"]);
+
+      // cleanup
+      await channel.ShutdownAsync();
+      await server.ShutdownAsync();
+    }
+
+    [Fact]
+    public async Task ReadStreamQueryTest()
+    {
+      // setup
+      Server server = new Server
+      {
+        Services = { Publisher.BindService(new PluginSalesforceSandbox.Plugin.Plugin()) },
+        Ports = { new ServerPort("localhost", 0, ServerCredentials.Insecure) }
+      };
+      server.Start();
+
+      var port = server.Ports.First().BoundPort;
+
+      var channel = new Channel($"localhost:{port}", ChannelCredentials.Insecure);
+      var client = new Publisher.PublisherClient(channel);
+
+      var connectRequest = GetConnectSettings();
+
+      var discoverRequest = new DiscoverSchemasRequest
+      {
+        Mode = DiscoverSchemasRequest.Types.Mode.Refresh,
+        ToRefresh = { new Schema { Id = "Custom", Name = "Custom", Query = "SELECT Id, Name, Industry, LastModifiedDate, (SELECT Id, Name FROM Contacts) FROM Account WHEE Industry in ('Biotechnology', 'Energy')" } }
+      };
+
+      // act
+      client.Connect(connectRequest);
+      var discoverResponse = client.DiscoverSchemas(discoverRequest);
+
+      var request = new ReadRequest()
+      {
+        Schema = discoverResponse.Schemas.First(),
+      };
+
+      var response = client.ReadStream(request);
+      var responseStream = response.ResponseStream;
+      var records = new List<Record>();
+
+      while (await responseStream.MoveNext())
+      {
+        records.Add(responseStream.Current);
+      }
+
+      // assert
+      Assert.Equal(4, records.Count);
+
+      // cleanup
+      await channel.ShutdownAsync();
+      await server.ShutdownAsync();
+    }
+
+    [Fact]
+    public async Task ReadStreamLimitTest()
+    {
+      // setup
+      Server server = new Server
+      {
+        Services = { Publisher.BindService(new PluginSalesforceSandbox.Plugin.Plugin()) },
+        Ports = { new ServerPort("localhost", 0, ServerCredentials.Insecure) }
+      };
+      server.Start();
+
+      var port = server.Ports.First().BoundPort;
+
+      var channel = new Channel($"localhost:{port}", ChannelCredentials.Insecure);
+      var client = new Publisher.PublisherClient(channel);
+
+      var connectRequest = GetConnectSettings();
+
+      var request = new ReadRequest()
+      {
+        Schema = new Schema
         {
-            // setup
-            Server server = new Server
-            {
-                Services = { Publisher.BindService(new PluginSalesforceSandbox.Plugin.Plugin()) },
-                Ports = { new ServerPort("localhost", 0, ServerCredentials.Insecure) }
-            };
-            server.Start();
-
-            var port = server.Ports.First().BoundPort;
-
-            var channel = new Channel($"localhost:{port}", ChannelCredentials.Insecure);
-            var client = new Publisher.PublisherClient(channel);
-
-            var connectRequest = GetConnectSettings();
-
-            var discoverRequest = new DiscoverSchemasRequest
-            {
-                Mode = DiscoverSchemasRequest.Types.Mode.Refresh,
-                ToRefresh = { new Schema { Id = "Custom", Name = "Custom", Query = "SELECT Id, Name, Industry, LastModifiedDate, (SELECT Id, Name FROM Contacts) FROM Account WHEE Industry in ('Biotechnology', 'Energy')" } }
-            };
-
-            // act
-            client.Connect(connectRequest);
-            var discoverResponse = client.DiscoverSchemas(discoverRequest);
-
-            var request = new ReadRequest()
-            {
-                Schema = discoverResponse.Schemas.First(),
-            };
-
-            var response = client.ReadStream(request);
-            var responseStream = response.ResponseStream;
-            var records = new List<Record>();
-
-            while (await responseStream.MoveNext())
-            {
-                records.Add(responseStream.Current);
-            }
-
-            // assert
-            Assert.Equal(4, records.Count);
-
-            // cleanup
-            await channel.ShutdownAsync();
-            await server.ShutdownAsync();
-        }
-
-        [Fact]
-        public async Task ReadStreamLimitTest()
-        {
-            // setup
-            Server server = new Server
-            {
-                Services = { Publisher.BindService(new PluginSalesforceSandbox.Plugin.Plugin()) },
-                Ports = { new ServerPort("localhost", 0, ServerCredentials.Insecure) }
-            };
-            server.Start();
-
-            var port = server.Ports.First().BoundPort;
-
-            var channel = new Channel($"localhost:{port}", ChannelCredentials.Insecure);
-            var client = new Publisher.PublisherClient(channel);
-
-            var connectRequest = GetConnectSettings();
-
-            var request = new ReadRequest()
-            {
-                Schema = new Schema
-                {
-                    Id = "Account",
-                    Properties =
+          Id = "Account",
+          Properties =
                     {
                         new Property
                         {
@@ -503,53 +508,53 @@ namespace PluginSalesforceSandboxTest.Plugin
                             IsUpdateCounter = true
                         }
                     }
-                },
-                Limit = 1
-            };
+        },
+        Limit = 1
+      };
 
-            // act
-            client.Connect(connectRequest);
-            var response = client.ReadStream(request);
-            var responseStream = response.ResponseStream;
-            var records = new List<Record>();
+      // act
+      client.Connect(connectRequest);
+      var response = client.ReadStream(request);
+      var responseStream = response.ResponseStream;
+      var records = new List<Record>();
 
-            while (await responseStream.MoveNext())
-            {
-                records.Add(responseStream.Current);
-            }
+      while (await responseStream.MoveNext())
+      {
+        records.Add(responseStream.Current);
+      }
 
-            // assert
-            Assert.Single(records);
+      // assert
+      Assert.Single(records);
 
-            // cleanup
-            await channel.ShutdownAsync();
-            await server.ShutdownAsync();
-        }
+      // cleanup
+      await channel.ShutdownAsync();
+      await server.ShutdownAsync();
+    }
 
-        [Fact]
-        public async Task PrepareWriteTest()
+    [Fact]
+    public async Task PrepareWriteTest()
+    {
+      // setup
+      Server server = new Server
+      {
+        Services = { Publisher.BindService(new PluginSalesforceSandbox.Plugin.Plugin()) },
+        Ports = { new ServerPort("localhost", 0, ServerCredentials.Insecure) }
+      };
+      server.Start();
+
+      var port = server.Ports.First().BoundPort;
+
+      var channel = new Channel($"localhost:{port}", ChannelCredentials.Insecure);
+      var client = new Publisher.PublisherClient(channel);
+
+      var connectRequest = GetConnectSettings();
+
+      var request = new PrepareWriteRequest()
+      {
+        Schema = new Schema
         {
-            // setup
-            Server server = new Server
-            {
-                Services = { Publisher.BindService(new PluginSalesforceSandbox.Plugin.Plugin()) },
-                Ports = { new ServerPort("localhost", 0, ServerCredentials.Insecure) }
-            };
-            server.Start();
-
-            var port = server.Ports.First().BoundPort;
-
-            var channel = new Channel($"localhost:{port}", ChannelCredentials.Insecure);
-            var client = new Publisher.PublisherClient(channel);
-
-            var connectRequest = GetConnectSettings();
-
-            var request = new PrepareWriteRequest()
-            {
-                Schema = new Schema
-                {
-                    Id = "Account",
-                    Properties =
+          Id = "Account",
+          Properties =
                     {
                         new Property
                         {
@@ -569,52 +574,52 @@ namespace PluginSalesforceSandboxTest.Plugin
                             IsUpdateCounter = true
                         }
                     }
-                },
-                CommitSlaSeconds = 1
-            };
+        },
+        CommitSlaSeconds = 1
+      };
 
-            // act
-            client.Connect(connectRequest);
-            var response = client.PrepareWrite(request);
+      // act
+      client.Connect(connectRequest);
+      var response = client.PrepareWrite(request);
 
-            // assert
-            Assert.IsType<PrepareWriteResponse>(response);
+      // assert
+      Assert.IsType<PrepareWriteResponse>(response);
 
-            // cleanup
-            await channel.ShutdownAsync();
-            await server.ShutdownAsync();
-        }
+      // cleanup
+      await channel.ShutdownAsync();
+      await server.ShutdownAsync();
+    }
 
-        [Fact]
-        public async Task WriteStreamTest()
+    [Fact]
+    public async Task WriteStreamTest()
+    {
+      // setup
+      Server server = new Server
+      {
+        Services = { Publisher.BindService(new PluginSalesforceSandbox.Plugin.Plugin()) },
+        Ports = { new ServerPort("localhost", 0, ServerCredentials.Insecure) }
+      };
+      server.Start();
+
+      var port = server.Ports.First().BoundPort;
+
+      var channel = new Channel($"localhost:{port}", ChannelCredentials.Insecure);
+      var client = new Publisher.PublisherClient(channel);
+
+      var connectRequest = GetConnectSettings();
+
+      var discoverSchemasRequest = new DiscoverSchemasRequest
+      {
+        Mode = DiscoverSchemasRequest.Types.Mode.Refresh,
+        ToRefresh = { new Schema { Id = "Account" } }
+      };
+
+      var prepareRequest = new PrepareWriteRequest()
+      {
+        Schema = new Schema
         {
-            // setup
-            Server server = new Server
-            {
-                Services = { Publisher.BindService(new PluginSalesforceSandbox.Plugin.Plugin()) },
-                Ports = { new ServerPort("localhost", 0, ServerCredentials.Insecure) }
-            };
-            server.Start();
-
-            var port = server.Ports.First().BoundPort;
-
-            var channel = new Channel($"localhost:{port}", ChannelCredentials.Insecure);
-            var client = new Publisher.PublisherClient(channel);
-
-            var connectRequest = GetConnectSettings();
-
-            var discoverSchemasRequest = new DiscoverSchemasRequest
-            {
-                Mode = DiscoverSchemasRequest.Types.Mode.Refresh,
-                ToRefresh = { new Schema { Id = "Account" } }
-            };
-
-            var prepareRequest = new PrepareWriteRequest()
-            {
-                Schema = new Schema
-                {
-                    Id = "Account",
-                    Properties =
+          Id = "Account",
+          Properties =
                     {
                         new Property
                         {
@@ -634,11 +639,11 @@ namespace PluginSalesforceSandboxTest.Plugin
                             IsUpdateCounter = true
                         }
                     }
-                },
-                CommitSlaSeconds = 5
-            };
+        },
+        CommitSlaSeconds = 5
+      };
 
-            var records = new List<Record>()
+      var records = new List<Record>()
             {
                 {
                     new Record
@@ -650,70 +655,70 @@ namespace PluginSalesforceSandboxTest.Plugin
                 }
             };
 
-            var recordAcks = new List<RecordAck>();
+      var recordAcks = new List<RecordAck>();
 
-            // act
-            client.Connect(connectRequest);
-            client.DiscoverSchemas(discoverSchemasRequest);
-            client.PrepareWrite(prepareRequest);
+      // act
+      client.Connect(connectRequest);
+      client.DiscoverSchemas(discoverSchemasRequest);
+      client.PrepareWrite(prepareRequest);
 
-            using (var call = client.WriteStream())
-            {
-                var responseReaderTask = Task.Run(async () =>
-                {
-                    while (await call.ResponseStream.MoveNext())
-                    {
-                        var ack = call.ResponseStream.Current;
-                        recordAcks.Add(ack);
-                    }
-                });
-
-                foreach (Record record in records)
-                {
-                    await call.RequestStream.WriteAsync(record);
-                }
-
-                await call.RequestStream.CompleteAsync();
-                await responseReaderTask;
-            }
-
-            // assert
-            Assert.Single(recordAcks);
-            Assert.Equal("", recordAcks[0].Error);
-            Assert.Equal("test", recordAcks[0].CorrelationId);
-
-            // cleanup
-            await channel.ShutdownAsync();
-            await server.ShutdownAsync();
-        }
-
-        [Fact]
-        public async Task DisconnectTest()
+      using (var call = client.WriteStream())
+      {
+        var responseReaderTask = Task.Run(async () =>
         {
-            // setup
-            Server server = new Server
-            {
-                Services = { Publisher.BindService(new PluginSalesforceSandbox.Plugin.Plugin()) },
-                Ports = { new ServerPort("localhost", 0, ServerCredentials.Insecure) }
-            };
-            server.Start();
+          while (await call.ResponseStream.MoveNext())
+          {
+            var ack = call.ResponseStream.Current;
+            recordAcks.Add(ack);
+          }
+        });
 
-            var port = server.Ports.First().BoundPort;
-
-            var channel = new Channel($"localhost:{port}", ChannelCredentials.Insecure);
-            var client = new Publisher.PublisherClient(channel);
-
-            var request = new DisconnectRequest();
-
-            // act
-            var response = client.Disconnect(request);
-
-            // assert
-            Assert.IsType<DisconnectResponse>(response);
-
-            // cleanup
-            await channel.ShutdownAsync();
-            await server.ShutdownAsync();
+        foreach (Record record in records)
+        {
+          await call.RequestStream.WriteAsync(record);
         }
+
+        await call.RequestStream.CompleteAsync();
+        await responseReaderTask;
+      }
+
+      // assert
+      Assert.Single(recordAcks);
+      Assert.Equal("", recordAcks[0].Error);
+      Assert.Equal("test", recordAcks[0].CorrelationId);
+
+      // cleanup
+      await channel.ShutdownAsync();
+      await server.ShutdownAsync();
     }
+
+    [Fact]
+    public async Task DisconnectTest()
+    {
+      // setup
+      Server server = new Server
+      {
+        Services = { Publisher.BindService(new PluginSalesforceSandbox.Plugin.Plugin()) },
+        Ports = { new ServerPort("localhost", 0, ServerCredentials.Insecure) }
+      };
+      server.Start();
+
+      var port = server.Ports.First().BoundPort;
+
+      var channel = new Channel($"localhost:{port}", ChannelCredentials.Insecure);
+      var client = new Publisher.PublisherClient(channel);
+
+      var request = new DisconnectRequest();
+
+      // act
+      var response = client.Disconnect(request);
+
+      // assert
+      Assert.IsType<DisconnectResponse>(response);
+
+      // cleanup
+      await channel.ShutdownAsync();
+      await server.ShutdownAsync();
+    }
+  }
 }

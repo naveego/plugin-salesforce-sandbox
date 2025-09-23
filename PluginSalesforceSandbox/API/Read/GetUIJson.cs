@@ -3,23 +3,24 @@ using Newtonsoft.Json;
 
 namespace PluginSalesforceSandbox.API.Read
 {
-    public static partial class Read
+  public static partial class Read
+  {
+    public static string GetUIJson()
     {
-        public static string GetUIJson()
-        {
-            var uiJsonObj = new Dictionary<string, object>
+      var uiJsonObj = new Dictionary<string, object>
             {
                 {
                     "ui:order", new[]
                     {
                         "ChannelName",
+                        "BaseChannelName",
                         "OrganizationId",
                         "BatchWindowSeconds"
                     }
                 }
             };
 
-            return JsonConvert.SerializeObject(uiJsonObj);
-        }
+      return JsonConvert.SerializeObject(uiJsonObj);
     }
+  }
 }
