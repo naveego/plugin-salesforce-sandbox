@@ -261,7 +261,17 @@ namespace PluginSalesforceSandbox.API.Read
             }
 
             _topicInfo = _client.GetTopicByName(topicName);
-            _schemaInfo = _client.GetSchemaById(_topicInfo.SchemaId);
+
+            if (string.IsNullOrEmpty(_topicInfo.SchemaId))
+            {
+                var baseTopicName = _realTimeSettings.BaseChannelName;
+                var baseTopic = _client.GetTopicByName(baseTopicName);
+                _schemaInfo = _client.GetSchemaById(baseTopic.SchemaId);
+            }
+            else
+            {
+                _schemaInfo = _client.GetSchemaById(_topicInfo.SchemaId);
+            }
 
             Logger.Debug(JsonConvert.SerializeObject(_topicInfo));
             Logger.Debug(JsonConvert.SerializeObject(_schemaInfo));

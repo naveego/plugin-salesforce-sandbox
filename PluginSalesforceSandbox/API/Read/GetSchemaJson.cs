@@ -27,6 +27,12 @@ namespace PluginSalesforceSandbox.API.Read
                         {"title", "Channel Name"},
                         {"description", "Enter the name of the channel in Salesforce. To create or find an existing channel, please refer to this documentation: https://developer.salesforce.com/docs/atlas.en-us.change_data_capture.meta/change_data_capture/cdc_subscribe_channels.htm"}
                     }},
+                    {"BaseChannelName", new Dictionary<string, object>
+                    {
+                        {"type", "string"},
+                        {"title", "Base Channel Name"},
+                        {"description", "If using a custom channel then provide the name of the base object channel in Salesforce. To find an existing channel, please refer to this documentation: https://developer.salesforce.com/docs/atlas.en-us.change_data_capture.meta/change_data_capture/cdc_subscribe_channels.htm"}
+                    }},
                     {"OrganizationId", new Dictionary<string, object>
                     {
                         {"type", "string"},
