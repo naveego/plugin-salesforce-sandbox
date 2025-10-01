@@ -3,6 +3,7 @@ namespace PluginSalesforceSandbox.API.Read
     public class RealTimeSettings
     {
         public string ChannelName { get; set; }
+        public string BaseChannelName { get; set; }
         public int BatchWindowSeconds { get; set; } = 5;
         public string OrganizationId { get; set; }
     }
